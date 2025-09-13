@@ -1,0 +1,19 @@
+// src/main.ts
+import bot from "./bot.ts";
+import { webhookCallback } from "https://deno.land/x/grammy@v1.38.2/mod.ts";
+
+const useWebhook = Deno.env.get("WEBHOOK") === "1";
+
+if (useWebhook) {
+  const handle = webhookCallback(bot, "std/http");
+  Deno.serve((req) => {
+    const url = new URL(req.url);
+    // Optional secret path based on token; adjust as needed
+    if (req.method === "POST" && url.pathname === `/${bot.token}`) {
+      return handle(req);
+    }
+    return new Response("OK");
+  });
+} else {
+  await bot.start();
+}
