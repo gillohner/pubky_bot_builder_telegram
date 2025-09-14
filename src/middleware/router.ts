@@ -1,10 +1,10 @@
 // src/middleware/router.ts
-import {
-  Composer,
-  type Context,
-} from "https://deno.land/x/grammy@v1.38.2/mod.ts";
-import { buildSnapshot /* not implemented */ } from "../core/snapshot.ts";
-import { dispatch /* not implemented */ } from "../core/dispatcher.ts";
+import { Composer, type Context } from "grammy";
+import { buildSnapshot } from "@core/snapshot/snapshot.ts";
+import { dispatch } from "@core/dispatch/dispatcher.ts";
+import { applyServiceResponse } from "./response.ts";
+import { normalizeCommand, isBotCommand } from "@/core/util/utils.ts";
+import { log } from "@/core/util/logger.ts";
 
 export function buildMiddleware() {
   const composer = new Composer<Context>();
@@ -14,7 +14,7 @@ export function buildMiddleware() {
     try {
       await next();
     } catch (err) {
-      console.error("Middleware error:", err);
+      log.error("middleware.error", { error: (err as Error).message });
     }
   });
 
@@ -23,28 +23,23 @@ export function buildMiddleware() {
     "message:text",
     async (ctx: Context, next: () => Promise<void>) => {
       const text = ctx.message?.text ?? "";
-      if (!text.startsWith("/")) return await next();
+      if (!isBotCommand(text)) return await next();
 
       const chatId = String(ctx.chat?.id ?? "");
       // Extract command token, strip leading '/', and drop optional @BotName suffix
       const token = text.split(" ")[0] ?? "";
-      const command = token.replace(/^\//, "").replace(/@[^\s]+$/, "");
+      const command = normalizeCommand(token.replace(/@[^\s]+$/, ""));
 
       // Build or fetch a routing snapshot (placeholder)
       await buildSnapshot(chatId);
 
-      // Dispatch to a service based on the snapshot (placeholder)
-      await dispatch({
+      // Dispatch to a service based on the snapshot and translate response
+      const result = await dispatch({
         kind: "command",
         command,
-        ctx: {
-          chatId,
-          userId: String(ctx.from?.id ?? ""),
-        },
+        ctx: { chatId, userId: String(ctx.from?.id ?? "") },
       });
-
-      // Send a generic placeholder response
-      await ctx.reply("Command received and forwarded.");
+      await applyServiceResponse(ctx, result.response);
     }
   );
 
@@ -58,31 +53,28 @@ export function buildMiddleware() {
     const chatId = String(ctx.chat?.id ?? "");
     const data = ctx.callbackQuery?.data ?? "";
     await buildSnapshot(chatId);
-    await dispatch({
+    const result = await dispatch({
       kind: "callback",
       data,
-      ctx: {
-        chatId,
-        userId: String(ctx.from?.id ?? ""),
-      },
+      ctx: { chatId, userId: String(ctx.from?.id ?? "") },
     });
+    await applyServiceResponse(ctx, result.response);
     await ctx.answerCallbackQuery();
+    log.debug("callback.processed", { chatId, data });
   });
 
   // 6) Generic message listeners (forward as messages)
   composer.on("message", async (ctx: Context, next: () => Promise<void>) => {
     const chatId = String(ctx.chat?.id ?? "");
     await buildSnapshot(chatId);
-    await dispatch({
+    const result = await dispatch({
       kind: "message",
       message: ctx.message,
-      ctx: {
-        chatId,
-        userId: String(ctx.from?.id ?? ""),
-      },
+      ctx: { chatId, userId: String(ctx.from?.id ?? "") },
     });
+    await applyServiceResponse(ctx, result.response);
     await next();
-    await ctx.reply("Message received and forwarded.");
+    log.debug("message.processed", { chatId });
   });
 
   return composer;

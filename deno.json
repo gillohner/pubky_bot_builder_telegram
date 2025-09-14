@@ -1,6 +1,9 @@
 {
   "imports": {
-    "grammy": "https://deno.land/x/grammy@v1.38.2/mod.ts"
+    "grammy": "https://deno.land/x/grammy@v1.38.2/mod.ts",
+    "@/": "./src/",
+    "@core/": "./src/core/",
+    "@middleware/": "./src/middleware/"
   },
   "tasks": {
     "dev": "deno run --watch --allow-net --allow-env --allow-run --allow-import=deno.land,cdn.skypack.dev,jsr.io --env-file=.env.local src/main.ts",

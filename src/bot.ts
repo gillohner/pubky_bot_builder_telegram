@@ -1,6 +1,6 @@
 // src/bot.ts
-import { Bot } from "https://deno.land/x/grammy@v1.38.2/mod.ts";
-import { buildMiddleware } from "./middleware/router.ts";
+import { Bot } from "grammy";
+import { buildMiddleware } from "@middleware/router.ts";
 
 const token = Deno.env.get("BOT_TOKEN");
 if (!token) throw new Error("BOT_TOKEN is required");
