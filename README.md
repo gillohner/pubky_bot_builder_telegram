@@ -1,30 +1,36 @@
 # Pubky Telegram Bot Builder (Deno)
 
-Lightweight experimental framework for composing Telegram bot services (commands, flows, listeners) executed inside a constrained sandbox with a routing snapshot and a simple in-memory state layer.
+Lightweight experimental framework for composing Telegram bot services (commands, flows, listeners)
+executed inside a constrained sandbox with a routing snapshot and a simple in-memory state layer.
 
 ## Features
 
 - Snapshot-driven routing (commands + listeners)
 - Sandboxed service execution (data: URLs; future: remote bundles)
 - In-memory state for multi-step command flows (no database; deliberately ephemeral)
-- Active flow sessions: after invoking a `command_flow` once, plain chat messages are routed to it until it clears state
+- Active flow sessions: after invoking a `command_flow` once, plain chat messages are routed to it
+  until it clears state
 - Inline keyboard + callback query wiring (extensible)
 - Structured logging + centralized config
 - Minimal service protocol with schema versioning
 
 ## Active Flow Sessions (No Repeated /command Needed)
 
-When a user runs a `command_flow` (e.g. `/flow` or `/survey`) the service can emit a state directive:
+When a user runs a `command_flow` (e.g. `/flow` or `/survey`) the service can emit a state
+directive:
 
 - `replace` or `merge` => activates the flow for that chat
 - `clear` => deactivates the flow
 
-While a flow is active, any non-command message in the chat is routed directly back to that flow service with the latest persisted state. The service returns a response plus (optionally) a new state directive to progress or finish.
+While a flow is active, any non-command message in the chat is routed directly back to that flow
+service with the latest persisted state. The service returns a response plus (optionally) a new
+state directive to progress or finish.
 
 ### Session Lifecycle
 
 1. User sends `/flow`
-2. Service responds with a prompt and `state: { op: 'replace', value: { step: 1 } }` -> activates flow
+2. Service responds with a prompt and `state: { op: 'replace', value: { step: 1 } }` -> activates
+   flow
 3. User sends free-form text (no leading slash)
 4. Dispatcher detects active flow and routes the message event (including current state)
 5. Flow returns updated state; remains active or clears to finish
@@ -37,11 +43,15 @@ State is intentionally memory-only. Reasons:
 - Encourages flows that recover gracefully or are short-lived.
 - Avoids hidden durability assumptions in examples.
 
-If long-term durability or multi-instance scaling becomes a requirement, a future redesign can introduce a persistence adapter. Service code already uses declarative state directives (`clear | replace | merge`) so adding a backend later would be localized to the state module.
+If long-term durability or multi-instance scaling becomes a requirement, a future redesign can
+introduce a persistence adapter. Service code already uses declarative state directives
+(`clear | replace | merge`) so adding a backend later would be localized to the state module.
 
 ### Inline Keyboards & Edits
 
-Service replies can include arbitrary Telegram `reply_markup` via the `options` field. Edit responses (`kind: 'edit'`) attempt to edit the triggering message; if that fails they fall back to a new reply.
+Service replies can include arbitrary Telegram `reply_markup` via the `options` field. Edit
+responses (`kind: 'edit'`) attempt to edit the triggering message; if that fails they fall back to a
+new reply.
 
 ## Writing a Flow Service
 
@@ -71,7 +81,7 @@ Clearing state ends the active session:
 Run all tests:
 
 ```
- deno task test
+deno task test
 ```
 
 New tests demonstrate active flow progression without re-sending `/flow`.
@@ -88,7 +98,11 @@ Planned next steps (PRs welcome):
 
 ## State & Flow Notes
 
-The state subsystem supports per-user active flow sessions and optional TTLs for automatic expiry (`ttlMs` in `setActiveFlow`). Scaling beyond a single process would require introducing a real persistence layer (not included) and converting the synchronous API to an async variant. Until then, horizontal scaling means sticky routing of all updates for a `(chatId,userId)` pair to the same process.
+The state subsystem supports per-user active flow sessions and optional TTLs for automatic expiry
+(`ttlMs` in `setActiveFlow`). Scaling beyond a single process would require introducing a real
+persistence layer (not included) and converting the synchronous API to an async variant. Until then,
+horizontal scaling means sticky routing of all updates for a `(chatId,userId)` pair to the same
+process.
 
 Operational suggestions (even for in-memory):
 
@@ -106,16 +120,19 @@ Operational suggestions (even for in-memory):
 
 ### Ephemeral Image Handling (Survey Example)
 
-The enhanced `survey` service shows how a flow can accept either a Telegram photo upload or a raw URL without persisting binary data:
+The enhanced `survey` service shows how a flow can accept either a Telegram photo upload or a raw
+URL without persisting binary data:
 
-1. Earlier steps collect structured answers (color via inline keyboard callback, animal via validated text).
+1. Earlier steps collect structured answers (color via inline keyboard callback, animal via
+   validated text).
 2. Image step inspects the incoming message:
 
 - If it contains a `photo` array, select the largest size's `file_id` (Telegram caches the media).
 - Else if text matches `^https?://` treat it as an external image URL.
 - Otherwise respond with an `edit` prompting the user again (state not advanced).
 
-3. Final response uses `kind: 'photo'` with the `file_id` (or URL) and issues `state: { op: 'clear' }` to terminate the flow.
+3. Final response uses `kind: 'photo'` with the `file_id` (or URL) and issues
+   `state: { op: 'clear' }` to terminate the flow.
 
 Benefits:
 
@@ -125,7 +142,8 @@ Benefits:
 
 Extension ideas:
 
-- Add a size/type whitelist by fetching `getFile` metadata (requires net capability and host allowance).
+- Add a size/type whitelist by fetching `getFile` metadata (requires net capability and host
+  allowance).
 - Enforce TTL for pending image steps; auto-expire with `sweepExpiredFlows()`.
 - Provide a cancel button that returns a `delete` response kind.
 
@@ -137,11 +155,13 @@ Extension ideas:
 - Metrics exporter (Prometheus/OpenTelemetry)
 - Pluggable serialization hooks
 
-If you later need durable state, introduce a new module (e.g. `state/persisted.ts`) with async primitives and adjust dispatcher code; avoid prematurely widening the current sync API.
+If you later need durable state, introduce a new module (e.g. `state/persisted.ts`) with async
+primitives and adjust dispatcher code; avoid prematurely widening the current sync API.
 
 ## Security Notes
 
-Sandbox currently executes data URL code with restricted permissions (no fs/env). Always review untrusted service code before inclusion.
+Sandbox currently executes data URL code with restricted permissions (no fs/env). Always review
+untrusted service code before inclusion.
 
 ## License
 

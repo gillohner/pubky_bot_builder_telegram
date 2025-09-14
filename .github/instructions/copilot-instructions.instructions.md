@@ -7,4 +7,5 @@ applyTo: "**"
 - use "deno task dev" to run locally
 - Never use type "any"; prefer explicit types or generics.
 
-Provide project context and coding guidelines that AI should follow when generating code, answering questions, or reviewing changes.
+Provide project context and coding guidelines that AI should follow when generating code, answering
+questions, or reviewing changes.
