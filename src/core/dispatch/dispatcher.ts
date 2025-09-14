@@ -1,8 +1,8 @@
 // src/core/dispatch/dispatcher.ts
 // Moved from src/core/dispatcher.ts
-import { buildSnapshot } from "../snapshot/snapshot.ts";
-import { sandboxHost } from "../sandbox/host.ts";
-import { log } from "../util/logger.ts";
+import { buildSnapshot } from "@core/snapshot/snapshot.ts";
+import { sandboxHost } from "@core/sandbox/host.ts";
+import { log } from "@core/util/logger.ts";
 import {
 	applyStateDirective,
 	clearActiveFlow,
@@ -15,7 +15,7 @@ import {
 	SandboxPayload,
 	SERVICE_PROTOCOL_SCHEMA_VERSION,
 	ServiceResponse,
-} from "../service_types.ts";
+} from "@core/service_types.ts";
 
 type BaseCtx = { chatId: string; userId: string };
 type CommandEvent = { kind: "command"; command: string; ctx: BaseCtx };

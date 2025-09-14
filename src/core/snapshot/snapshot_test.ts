@@ -1,5 +1,5 @@
 // src/core/snapshot/snapshot_test.ts
-import { buildSnapshot } from "./snapshot.ts";
+import { buildSnapshot } from "@core/snapshot/snapshot.ts";
 
 Deno.test("snapshot basic structure", async () => {
 	const snap = await buildSnapshot("chat-test");

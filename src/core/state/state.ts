@@ -50,7 +50,7 @@ export function clearServiceState(p: KeyParts): void {
 }
 
 export interface ApplyParams extends KeyParts {
-	directive: import("../service_types.ts").StateDirective;
+	directive: import("@core/service_types.ts").StateDirective;
 }
 
 export function applyStateDirective(p: ApplyParams): StoredState | undefined {

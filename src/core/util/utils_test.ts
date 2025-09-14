@@ -1,5 +1,10 @@
 // src/core/util/utils_test.ts
-import { buildCallbackData, isBotCommand, normalizeCommand, parseCallbackData } from "./utils.ts";
+import {
+	buildCallbackData,
+	isBotCommand,
+	normalizeCommand,
+	parseCallbackData,
+} from "@core/util/utils.ts";
 
 Deno.test("normalizeCommand strips leading slash and lowercases", () => {
 	const out = normalizeCommand("/HeLLo");

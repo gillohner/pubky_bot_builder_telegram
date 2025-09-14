@@ -8,4 +8,4 @@ export * from "@core/util/utils.ts";
 export * from "@core/util/logger.ts";
 export * from "@/core/config.ts";
 // Middleware exports (optional)
-export { buildMiddleware } from "./middleware/router.ts";
+export { buildMiddleware } from "@middleware/router.ts";

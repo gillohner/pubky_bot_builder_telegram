@@ -1,5 +1,5 @@
 // src/middleware/response.test.ts
-import { applyServiceResponse } from "./response.ts";
+import { applyServiceResponse } from "@middleware/response.ts";
 import type { ServiceResponse } from "@core/service_types.ts";
 import type { Context } from "grammy";
 

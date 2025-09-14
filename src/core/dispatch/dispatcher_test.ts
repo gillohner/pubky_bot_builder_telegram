@@ -1,5 +1,5 @@
 // src/core/dispatch/dispatcher_test.ts
-import { dispatch } from "./dispatcher.ts";
+import { dispatch } from "@core/dispatch/dispatcher.ts";
 
 Deno.test("dispatch handles command event without error", async () => {
 	const res = await dispatch({

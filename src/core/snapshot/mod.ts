@@ -1,2 +1,2 @@
 // src/core/snapshot/mod.ts
-export * from "./snapshot.ts";
+export * from "@core/snapshot/snapshot.ts";

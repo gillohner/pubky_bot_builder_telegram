@@ -1,2 +1,2 @@
 // src/core/sandbox/mod.ts
-export * from "./host.ts";
+export * from "@core/sandbox/host.ts";

@@ -1,7 +1,7 @@
 // src/core/util/data_url.ts
 // Helper to read a local TypeScript file and convert to a sandboxable data URL.
 // Caches encoded content by file path + mtime to avoid repeated base64 work.
-import { log } from "./logger.ts";
+import { log } from "@core/util/logger.ts";
 
 interface CacheEntry {
 	url: string;

@@ -1,5 +1,5 @@
 // src/core/logger.ts
-import { CONFIG, getMinLevel, isDebug, isProd } from "../config.ts";
+import { CONFIG, getMinLevel, isDebug, isProd } from "@core/config.ts";
 
 type Level = "debug" | "info" | "warn" | "error";
 

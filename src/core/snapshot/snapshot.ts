@@ -1,7 +1,7 @@
 // src/core/snapshot/snapshot.ts
 // Moved from src/core/snapshot.ts (initial refactor; mock services kept inline for now)
-import { log } from "../util/logger.ts";
-import { fileToDataUrl } from "../util/data_url.ts";
+import { log } from "@core/util/logger.ts";
+import { fileToDataUrl } from "@core/util/data_url.ts";
 
 export interface BaseRoute {
 	serviceId: string;

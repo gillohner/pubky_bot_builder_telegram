@@ -2,7 +2,7 @@
 import { Composer, type Context } from "grammy";
 import { buildSnapshot } from "@core/snapshot/snapshot.ts";
 import { dispatch } from "@core/dispatch/dispatcher.ts";
-import { applyServiceResponse } from "./response.ts";
+import { applyServiceResponse } from "@middleware/response.ts";
 import { isBotCommand, normalizeCommand } from "@/core/util/utils.ts";
 import { log } from "@/core/util/logger.ts";
 

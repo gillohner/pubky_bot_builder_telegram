@@ -1,5 +1,5 @@
 // src/middleware/router.test.ts
-import { buildMiddleware } from "./router.ts";
+import { buildMiddleware } from "@middleware/router.ts";
 
 Deno.test("buildMiddleware returns a Composer instance with use method", () => {
 	const composer = buildMiddleware();
