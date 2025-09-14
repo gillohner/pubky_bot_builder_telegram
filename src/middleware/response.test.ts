@@ -10,10 +10,26 @@ class MockCtx {
   public chat = { id: 1 } as const;
   public msg = { message_id: 10 } as const;
   public callbackQuery: null = null;
+  public failWithNoop = false;
+  public deleted: number[] = [];
   api = {
     editMessageText: (_chatId: number, _messageId: number, text: string) => {
+      if (this.failWithNoop) {
+        const err = new Error(
+          "Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message"
+        );
+        interface DescErr {
+          description?: string;
+        }
+        (err as unknown as DescErr).description = err.message; // emulate grammy error shape
+        throw err;
+      }
       this.edits.push({ text });
       return { message_id: _messageId } as unknown;
+    },
+    deleteMessage: (_chatId: number, messageId: number) => {
+      this.deleted.push(messageId);
+      return true as unknown;
     },
   };
   reply(text: string, options?: Record<string, unknown>) {
@@ -57,5 +73,34 @@ Deno.test("applyServiceResponse ignores none", async () => {
   await applyServiceResponse(ctx as unknown as Context, resp);
   if (ctx.replies.length !== 0 || ctx.edits.length !== 0) {
     throw new Error("Expected no actions for none response");
+  }
+});
+
+Deno.test(
+  "applyServiceResponse suppresses fallback on no-op edit",
+  async () => {
+    const ctx = new MockCtx();
+    ctx.failWithNoop = true;
+    const resp: ServiceResponse = { kind: "edit", text: "Same" };
+    await applyServiceResponse(ctx as unknown as Context, resp);
+    if (ctx.replies.length !== 0) {
+      throw new Error("Expected no fallback reply for no-op edit");
+    }
+  }
+);
+
+Deno.test("applyServiceResponse handles delete", async () => {
+  const ctx = new MockCtx();
+  // simulate callback context to provide message to delete
+  interface CQ {
+    message: { message_id: number };
+  }
+  (ctx as unknown as { callbackQuery: CQ }).callbackQuery = {
+    message: ctx.msg,
+  };
+  const resp: ServiceResponse = { kind: "delete" } as ServiceResponse;
+  await applyServiceResponse(ctx as unknown as Context, resp);
+  if (ctx.deleted.length !== 1 || ctx.deleted[0] !== ctx.msg.message_id) {
+    throw new Error("Expected one deleted message matching original id");
   }
 });

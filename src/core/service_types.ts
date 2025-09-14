@@ -25,9 +25,6 @@ export const SERVICE_PROTOCOL_SCHEMA_VERSION = 1 as const;
 // fingerprinting & complexity early on.
 export type ServiceCapability =
   | "net" // Outbound network access
-  | "fs_read" // Read-only filesystem access (scoped paths)
-  | "fs_write" // Write filesystem access (scoped paths)
-  | "env" // Read selected environment variables
   | "crypto" // Access to subtle crypto / randomness
   | "timers"; // Long running timers / intervals (for periodic kinds)
 
@@ -63,6 +60,10 @@ export type StateDirective =
 
 export interface ServiceReplyBase {
   state?: StateDirective;
+  // When true, host should attempt to delete the triggering user/callback message
+  // AFTER successfully sending/editing the bot response. Ignored for kinds where
+  // message context is unavailable.
+  deleteTrigger?: boolean;
 }
 
 export interface ServiceReplyMessage extends ServiceReplyBase {
@@ -93,12 +94,21 @@ export interface ServiceReplyPhoto extends ServiceReplyBase {
   options?: Record<string, unknown>; // reply_markup, parse_mode, etc.
 }
 
+// Delete: request deletion of the triggering message (e.g., closing an inline menu)
+export interface ServiceReplyDelete extends ServiceReplyBase {
+  kind: "delete";
+  // Optional fallback reply if deletion fails (e.g., older message not deletable)
+  fallbackText?: string;
+  options?: Record<string, unknown>;
+}
+
 export type ServiceResponse =
   | ServiceReplyMessage
   | ServiceReplyEdit
   | ServiceReplyNone
   | ServiceReplyError
-  | ServiceReplyPhoto;
+  | ServiceReplyPhoto
+  | ServiceReplyDelete;
 
 export interface DispatcherResult {
   response: ServiceResponse | null; // null when no applicable route / ignored event
@@ -107,6 +117,8 @@ export interface DispatcherResult {
 export interface SandboxExecuteEventCommand {
   type: "command";
   token: string; // normalized command token without leading '/'
+  state?: Record<string, unknown>; // current persisted state for this (chat,user,service)
+  stateVersion?: number; // version for optimistic concurrency (future use)
 }
 export interface SandboxExecuteEventCallback {
   type: "callback";
@@ -117,6 +129,9 @@ export interface SandboxExecuteEventCallback {
 export interface SandboxExecuteEventMessage {
   type: "message";
   message: unknown;
+  // For active flow sessions we also supply state similar to command/callback.
+  state?: Record<string, unknown>;
+  stateVersion?: number;
 }
 export type SandboxExecuteEvent =
   | SandboxExecuteEventCommand

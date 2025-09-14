@@ -1,6 +1,7 @@
 // src/core/snapshot/snapshot.ts
 // Moved from src/core/snapshot.ts (initial refactor; mock services kept inline for now)
 import { log } from "../util/logger.ts";
+import { fileToDataUrl } from "../util/data_url.ts";
 
 export interface BaseRoute {
   serviceId: string;
@@ -29,73 +30,87 @@ interface CacheEntry {
 }
 const snapshotCache = new Map<string, CacheEntry>();
 
-function buildHelloDataUrl(): string {
-  const code = `// mock hello service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any; if(payload.event?.type==='command'){body={kind:'reply',text:'Hello from sandbox!'};} else { body={kind:'none'};} console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function buildKeyboardDataUrl(): string {
-  const code = `// mock keyboard service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any={kind:'none'}; if(payload.event?.type==='command'){ body={kind:'reply',text:'Choose an option',options:{reply_markup:{inline_keyboard:[[ {text:'Photo',callback_data:'demo:1:'+ btoa(JSON.stringify({action:'photo'}))}] ]}}}; } console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function buildPhotoDataUrl(): string {
-  const code = `// mock photo service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any={kind:'none'}; if(payload.event?.type==='command'){ body={kind:'photo',photo:'https://nexus.pubky.app/static/files/c5nr657md9g8mut1xhjgf9h3cxaio3et9xyupo4fsgi5f7etocey/0033WXE37S700/feed',caption:'Here is a kitten!'};} console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function buildFlowDataUrl(): string {
-  const code = `// mock command flow service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any={kind:'none'}; if(payload.event?.type==='command'){ const token=payload.event.token||''; const step=(token as string).length % 3; if(step===0) body={kind:'reply',text:'Flow step 1 - send /flow again'}; else if(step===1) body={kind:'reply',text:'Flow step 2 - one more /flow'}; else body={kind:'reply',text:'Flow complete!'};} console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function buildEnvProbeDataUrl(): string {
-  const code = `// mock env probe service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any={kind:'none'}; if(payload.event?.type==='command'){ const diagnostics:string[]=[]; try{diagnostics.push('ENV_BOT_TOKEN='+(Deno.env.get('BOT_TOKEN')||'MISSING'));}catch{diagnostics.push('env_denied');} try{await Deno.readTextFile('README.md'); diagnostics.push('read_ok');}catch{diagnostics.push('read_denied');} body={kind:'reply',text:'env probe: '+ diagnostics.join(',')}; } console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function buildListenerDataUrl(): string {
-  const code = `// mock listener service (sandboxed)\ninterface ExecutePayload { event: any; ctx: any }\nasync function readAll(): Promise<string>{const d=new TextDecoder();const cs:Uint8Array[]=[];for await (const c of Deno.stdin.readable)cs.push(c);const t=new Uint8Array(cs.reduce((n,c)=>n+c.length,0));let o=0;for(const c of cs){t.set(c,o);o+=c.length;}return d.decode(t).trim();}\nconst raw=await readAll();const payload= raw? JSON.parse(raw):{event:null,ctx:null};let body:any={kind:'none'}; if(payload.event?.type==='message'){ body={kind:'reply',text:'Listener saw a message'};} console.log(JSON.stringify(body));`;
-  return encodeDataUrl(code);
-}
-function encodeDataUrl(code: string): string {
-  return `data:application/typescript;base64,${btoa(code)}`;
-}
+// Paths for example services
+const EXAMPLES = {
+  hello: "./src/example_services/hello.ts",
+  keyboard: "./src/example_services/keyboard.ts",
+  photo: "./src/example_services/photo.ts",
+  env: "./src/example_services/env_probe.ts",
+  listener: "./src/example_services/listener.ts",
+  flow: "./src/example_services/flow.ts",
+  survey: "./src/example_services/survey.ts",
+  links: "./src/example_services/links.ts",
+} as const;
 
 export async function buildSnapshot(chatId: string): Promise<RoutingSnapshot> {
   const now = Date.now();
   const cached = snapshotCache.get(chatId);
   if (cached && cached.expires > now) return cached.snapshot;
   await Promise.resolve();
+  // Pre-encode example services
+  const [
+    helloUrl,
+    keyboardUrl,
+    photoUrl,
+    envUrl,
+    listenerUrl,
+    flowUrl,
+    surveyUrl,
+    linksUrl,
+  ] = await Promise.all([
+    fileToDataUrl(EXAMPLES.hello),
+    fileToDataUrl(EXAMPLES.keyboard),
+    fileToDataUrl(EXAMPLES.photo),
+    fileToDataUrl(EXAMPLES.env),
+    fileToDataUrl(EXAMPLES.listener),
+    fileToDataUrl(EXAMPLES.flow),
+    fileToDataUrl(EXAMPLES.survey),
+    fileToDataUrl(EXAMPLES.links),
+  ]);
   const snapshot: RoutingSnapshot = {
     commands: {
       hello: {
         serviceId: "mock_hello",
         kind: "single_command",
-        entry: buildHelloDataUrl(),
+        entry: helloUrl,
         config: { greeting: "Hello from sandbox!" },
       },
       keyboard: {
         serviceId: "mock_keyboard",
         kind: "single_command",
-        entry: buildKeyboardDataUrl(),
+        entry: keyboardUrl,
       },
       photo: {
         serviceId: "mock_photo",
         kind: "single_command",
-        entry: buildPhotoDataUrl(),
+        entry: photoUrl,
       },
       flow: {
         serviceId: "mock_flow",
         kind: "command_flow",
-        entry: buildFlowDataUrl(),
+        entry: flowUrl,
+      },
+      survey: {
+        serviceId: "mock_survey",
+        kind: "command_flow",
+        entry: surveyUrl,
+      },
+      links: {
+        serviceId: "mock_links",
+        kind: "single_command",
+        entry: linksUrl,
       },
       env: {
         serviceId: "mock_env_probe",
         kind: "single_command",
-        entry: buildEnvProbeDataUrl(),
+        entry: envUrl,
       },
     },
     listeners: [
       {
         serviceId: "mock_listener",
         kind: "listener",
-        entry: buildListenerDataUrl(),
+        entry: listenerUrl,
       },
     ],
     builtAt: now,
@@ -109,3 +124,5 @@ export async function buildSnapshot(chatId: string): Promise<RoutingSnapshot> {
   });
   return snapshot;
 }
+
+// (Flow & survey examples now external in example_services folder)

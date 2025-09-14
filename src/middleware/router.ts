@@ -30,6 +30,8 @@ export function buildMiddleware() {
       const token = text.split(" ")[0] ?? "";
       const command = normalizeCommand(token.replace(/@[^\s]+$/, ""));
 
+      log.error("middleware.command", { command, chatId });
+
       // Build or fetch a routing snapshot (placeholder)
       await buildSnapshot(chatId);
 
