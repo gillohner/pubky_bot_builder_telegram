@@ -1,5 +1,6 @@
 // src/middleware/response.test.ts
-import { applyServiceResponse } from "@middleware/response.ts";
+import { applyServiceResponse } from "@middleware/response.ts"; // shim delegates to platform adapter
+import { defaultAdapter } from "@adapters/registry.ts";
 import type { ServiceResponse } from "@core/service_types.ts";
 import type { Context } from "grammy";
 
@@ -46,6 +47,16 @@ Deno.test("applyServiceResponse handles reply", async () => {
 	await applyServiceResponse(ctx as unknown as Context, resp);
 	if (ctx.replies.length !== 1 || ctx.replies[0].text !== "Hello") {
 		throw new Error("Expected one reply with correct text");
+	}
+});
+
+Deno.test("telegram adapter direct applyResponse", async () => {
+	const ctx = new MockCtx();
+	const adapter = defaultAdapter();
+	const resp: ServiceResponse = { kind: "reply", text: "Hi via adapter" };
+	await adapter.applyResponse({ platformCtx: ctx as unknown as Context }, resp);
+	if (ctx.replies.length !== 1 || ctx.replies[0].text !== "Hi via adapter") {
+		throw new Error("Adapter should have produced one reply");
 	}
 });
 

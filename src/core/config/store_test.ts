@@ -9,7 +9,7 @@ import {
 	saveSnapshot,
 	setChatConfig,
 } from "@core/config/store.ts";
-import { RoutingSnapshot } from "@/types/routing.ts";
+import type { RoutingSnapshot } from "@schema/routing.ts";
 
 Deno.test("config store set and get", () => {
 	initDb(":memory:");

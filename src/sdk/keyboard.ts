@@ -1,5 +1,4 @@
-// Inline keyboard builder helper for services.
-// Provides a typed, chainable API to compose reply_markup objects while keeping runtime lightweight.
+// sdk/keyboard.ts
 
 export interface InlineButton {
 	text: string;
@@ -18,9 +17,7 @@ export class InlineKeyboardBuilder implements InlineKeyboardRowBuilder {
 	private current: { text: string; callback_data: string }[] = [];
 
 	button(btn: InlineButton): InlineKeyboardRowBuilder {
-		if (!btn.hide) {
-			this.current.push({ text: btn.text, callback_data: btn.data });
-		}
+		if (!btn.hide) this.current.push({ text: btn.text, callback_data: btn.data });
 		return this;
 	}
 	buttons(btns: InlineButton[]): InlineKeyboardRowBuilder {

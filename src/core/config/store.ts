@@ -3,7 +3,7 @@
 // Only used for config & snapshot persistence; flow state remains in-memory.
 
 import { DB } from "sqlite";
-import { RoutingSnapshot } from "@/types/routing.ts";
+import type { RoutingSnapshot } from "@schema/routing.ts";
 import { log } from "@core/util/logger.ts";
 
 let db: DB | null = null;

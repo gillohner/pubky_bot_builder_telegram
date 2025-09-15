@@ -1,12 +1,13 @@
 // example_services/env_probe/service.ts
-import { defineService, none, reply, runService } from "../../pbb_sdk/mod.ts";
-import type { CommandEvent } from "../../pbb_sdk/mod.ts";
+import { defineService, none, reply, runService } from "../../sdk/mod.ts";
+import type { CommandEvent } from "../../sdk/mod.ts";
+import { ENV_PROBE_COMMAND, ENV_PROBE_SERVICE_ID, ENV_PROBE_VERSION } from "./constants.ts";
 
 const service = defineService({
-	id: "mock_env_probe",
-	version: "1.0.0",
+	id: ENV_PROBE_SERVICE_ID,
+	version: ENV_PROBE_VERSION,
 	kind: "single_command",
-	command: "env",
+	command: ENV_PROBE_COMMAND,
 	description: "Probe env & fs (should be denied)",
 	handlers: {
 		command: async (_ev: CommandEvent) => {

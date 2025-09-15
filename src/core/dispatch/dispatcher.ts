@@ -12,8 +12,8 @@ import {
 	setActiveFlow,
 } from "@core/state/state.ts";
 import { DispatcherResult, ServiceResponse } from "@core/service_types.ts";
-import { SandboxPayload } from "@/types/services.ts";
-import { ExecutePayload } from "@/types/sandbox.ts";
+import type { SandboxPayload } from "@schema/services.ts";
+import type { ExecutePayload } from "@schema/sandbox.ts";
 
 type BaseCtx = { chatId: string; userId: string };
 type CommandEvent = { kind: "command"; command: string; ctx: BaseCtx };

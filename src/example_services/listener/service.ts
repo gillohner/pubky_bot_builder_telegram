@@ -1,12 +1,13 @@
 // example_services/listener/service.ts
-import { defineService, none, reply, runService } from "../../pbb_sdk/mod.ts";
-import type { MessageEvent } from "../../pbb_sdk/mod.ts";
+import { defineService, none, reply, runService } from "../../sdk/mod.ts";
+import type { MessageEvent } from "../../sdk/mod.ts";
+import { LISTENER_COMMAND, LISTENER_SERVICE_ID, LISTENER_VERSION } from "./constants.ts";
 
 const service = defineService({
-	id: "mock_listener",
-	version: "1.0.0",
+	id: LISTENER_SERVICE_ID,
+	version: LISTENER_VERSION,
 	kind: "listener",
-	command: "listener",
+	command: LISTENER_COMMAND,
 	description: "Replies to any incoming message (listener)",
 	handlers: {
 		message: (_ev: MessageEvent) => reply("Listener saw a message"),

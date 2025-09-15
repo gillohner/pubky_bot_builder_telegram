@@ -3,6 +3,22 @@
 Lightweight experimental framework for composing Telegram bot services (commands, flows, listeners)
 executed inside a constrained sandbox with a routing snapshot and a simple in-memory state layer.
 
+## Monorepo Structure (Current)
+
+```
+src/
+  sdk/                # Public service authoring SDK (runtime + keyboard)
+  core/               # Snapshot, dispatch, state, sandbox security, config
+  middleware/         # Router, response/application wiring, admin helpers
+  adapters/           # Platform adapters (telegram, future: discord, etc.)
+  example_services/   # Example services (hello, flow, survey, etc.)
+  bot.ts              # Telegram bot bootstrap using adapter
+  main.ts             # Entry point (can wire additional platforms later)
+```
+
+Legacy `pbb_sdk` directory has been removed; all exports are now in `src/sdk`. Update imports to use
+`@sdk/` alias or relative `./sdk/mod.ts`.
+
 ## Features
 
 - Snapshot-driven routing (commands + listeners)
@@ -58,7 +74,7 @@ new reply.
 
 ## Writing a Flow Service
 
-Inside the sandbox a service receives a payload:
+Inside the sandbox a service receives a payload (stable contract tested by regression tests):
 
 ```
 {

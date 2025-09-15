@@ -1,14 +1,16 @@
 // example_services/survey/service.ts
-import { defineService, none, photoResp, reply, runService, state } from "../../pbb_sdk/mod.ts";
-import type { CallbackEvent, CommandEvent, MessageEvent } from "../../pbb_sdk/mod.ts";
+import { defineService, none, photoResp, reply, runService, state } from "../../sdk/mod.ts";
+import type { CallbackEvent, CommandEvent, MessageEvent } from "../../sdk/mod.ts";
+import {
+	SURVEY_COLORS,
+	SURVEY_COMMAND,
+	SURVEY_SERVICE_ID,
+	SURVEY_VERSION,
+	SurveyState,
+} from "./constants.ts";
 
 interface TelegramMessagePhotoSize {
 	file_id: string;
-}
-interface SurveyState {
-	stage: number;
-	color?: string;
-	animal?: string;
 }
 
 function asSurveyState(v: unknown): SurveyState | undefined {
@@ -27,19 +29,18 @@ function asSurveyState(v: unknown): SurveyState | undefined {
 }
 
 function colorKeyboard(selected?: string) {
-	const colors = ["Red", "Green", "Blue", "Yellow"];
 	return {
-		inline_keyboard: colors.map((
+		inline_keyboard: SURVEY_COLORS.map((
 			c,
 		) => [{ text: selected === c ? `✅ ${c}` : c, callback_data: `svc:mock_survey|color:${c}` }]),
 	};
 }
 
 const service = defineService({
-	id: "mock_survey",
-	version: "1.0.0",
+	id: SURVEY_SERVICE_ID,
+	version: SURVEY_VERSION,
 	kind: "command_flow",
-	command: "survey",
+	command: SURVEY_COMMAND,
 	description: "Three-step survey collecting color, animal, image",
 	handlers: {
 		command: (ev: CommandEvent) => {

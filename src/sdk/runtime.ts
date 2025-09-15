@@ -1,6 +1,7 @@
-// Moved runtime from src/sdk/runtime.ts into pbb_sdk for unified public SDK namespace.
-// (Original file path: src/sdk/runtime.ts)
-// NOTE: Keep implementation identical; only path changes.
+// sdk/runtime.ts
+// Public service runtime & helper primitives.
+// (Inlined from deprecated pbb_sdk/runtime.ts to remove legacy directory.)
+
 export type ServiceKind = "single_command" | "command_flow" | "listener";
 
 export interface StateDirectiveClear {
@@ -78,29 +79,21 @@ export interface ServiceDefinition {
 }
 
 export interface ServiceManifest {
-	/** Unique service id */
 	id: string;
-	/** Semver-like version */
 	version: string;
-	/** Kind of service (single_command | command_flow | listener) */
 	kind: ServiceKind;
-	/** Canonical command token (still present even for listener for uniformity) */
 	command: string;
-	/** Optional description */
 	description?: string;
-	/** Frozen schema version for tooling/tests */
 	schemaVersion: number;
 }
 
 export interface DefinedService extends ServiceDefinition {
-	/** Lightweight manifest (stable shape consumed by host/tests) */
 	manifest: ServiceManifest;
 }
 
 export const SERVICE_SDK_SCHEMA_VERSION = 1 as const;
 
 export function defineService(def: ServiceDefinition): DefinedService {
-	// Attach stable manifest projection (avoids test edits per service)
 	const manifest: ServiceManifest = {
 		id: def.id,
 		version: def.version,
@@ -109,7 +102,7 @@ export function defineService(def: ServiceDefinition): DefinedService {
 		description: def.description,
 		schemaVersion: SERVICE_SDK_SCHEMA_VERSION,
 	};
-	return Object.freeze({ ...def, manifest });
+	return Object.freeze({ ...def, manifest, handlers: def.handlers });
 }
 
 export function reply(
@@ -178,7 +171,6 @@ export const state = {
 
 // Service runtime entrypoint for sandbox.
 export async function runService(svc: DefinedService) {
-	// Parse payload from stdin (snapshot host sends JSON)
 	const raw = await new Response(Deno.stdin.readable).text();
 	const payload = JSON.parse(raw);
 	const event = payload.event as GenericEvent;

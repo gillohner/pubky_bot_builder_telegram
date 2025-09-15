@@ -19,6 +19,66 @@ async function readFile(path: string): Promise<{ code: string; mtime: number }> 
 	return { code, mtime: info.mtime?.getTime() ?? Date.now() };
 }
 
+// Very small, purpose-built inliner for same-directory relative imports (./*.ts) so
+// service code can freely factor out constants/helpers without breaking the sandbox
+// data URL execution (which cannot resolve further filesystem reads).
+// Limitations / Assumptions:
+// - Only inlines first-level & recursive same-directory relative imports that stay within
+//   the service folder (prevent directory escape via ../ guards).
+// - Skips .d.ts files.
+// - Avoids duplicate inclusion via visited set.
+// - Leaves side-effect imports (no bindings) intact but still inlines their code.
+async function inlineLocalImports(
+	entryPath: string,
+	visited: Set<string>,
+): Promise<string> {
+	if (visited.has(entryPath)) return ""; // already inlined
+	visited.add(entryPath);
+	const { code } = await readFile(entryPath);
+	// Remove SDK import lines (they will be provided separately)
+	const sdkImportRegex = /import\s+(?:type\s+)?\{[^}]+}\s+from\s+\"(?:[^\"]+sdk\/runtime\.ts)\";?/g;
+	const cleaned = code.replace(sdkImportRegex, "");
+	// Find relative same-dir imports: import ... from "./foo.ts" or "./foo" (ts)
+	const importRegex = /import\s+[^;]+from\s+\"(\.\/[^\"']+)\";?/g;
+	let match: RegExpExecArray | null;
+	const chunks: string[] = [];
+	let lastIndex = 0;
+	while ((match = importRegex.exec(cleaned))) {
+		const [full, rel] = match;
+		// push code before import
+		chunks.push(cleaned.slice(lastIndex, match.index));
+		lastIndex = match.index + full.length;
+		// Resolve path (restrict to same directory)
+		if (rel.startsWith("./") && !rel.includes("../")) {
+			let candidate = `${entryPath.substring(0, entryPath.lastIndexOf("/"))}/${rel.substring(2)}`;
+			if (!candidate.endsWith(".ts")) candidate += ".ts";
+			if (candidate.endsWith(".d.ts")) {
+				// drop declaration import
+				continue;
+			}
+			try {
+				const inlined = await inlineLocalImports(candidate, visited);
+				chunks.push(
+					`// ---- Inlined ${candidate} ----\n${inlined}\n// ---- End Inlined ${candidate} ----\n`,
+				);
+			} catch (e) {
+				log.warn("bundleService.inline.miss", {
+					entryPath,
+					missing: candidate,
+					error: (e as Error).message,
+				});
+				// Preserve original import if read failed (will likely error in sandbox, but we log)
+				chunks.push(full);
+			}
+		} else {
+			// Non same-dir relative import preserved
+			chunks.push(full);
+		}
+	}
+	chunks.push(cleaned.slice(lastIndex));
+	return chunks.join("");
+}
+
 export async function bundleService(
 	sdkPath: string,
 	servicePath: string,
@@ -30,19 +90,29 @@ export async function bundleService(
 		if (prev && prev.mtimeSdk === sdk.mtime && prev.mtimeSvc === svc.mtime) {
 			return { dataUrl: prev.url, code: prev.code };
 		}
-		// Strip import of SDK from service (it will be inlined). Simple regex heuristic.
-		// Support legacy path sdk/runtime.ts, new pbb_sdk/mod.ts, alias '@/pbb_sdk/mod.ts', and relative ../../pbb_sdk/mod.ts
-		const sdkImportRegex =
-			/import\s+(?:type\s+)?\{[^}]+}\s+from\s+\"(?:[^\"]+sdk\/runtime\.ts|(?:\.\.?\/)+pbb_sdk\/(?:mod|runtime)\.ts|@\/pbb_sdk\/(?:mod|runtime)\.ts)\";?/g;
-		const svcCode = svc.code.replace(sdkImportRegex, "");
+		const visited = new Set<string>();
+		const inlinedService = await inlineLocalImports(servicePath, visited);
 		const concatenated =
-			`${sdk.code}\n\n// ---- Inlined Service Source: ${servicePath} ----\n${svcCode}`;
-		const enc = new TextEncoder().encode(concatenated);
+			`${sdk.code}\n\n// ---- Inlined Service Graph Root: ${servicePath} ----\n${inlinedService}`;
+		// After inlining, strip ANY remaining relative import statements (they cannot
+		// resolve from a data: URL and would cause "invalid URL: relative URL with a cannot-be-a-base base")
+		// This is a safety net in case sdkImportRegex missed patterns (multi-line, type-only, etc.).
+		// Capture forms:
+		// 1. import { X } from "./foo.ts";
+		// 2. import type { X } from "./foo";
+		// 3. import "./side-effect"; (side-effect only)
+		const residualRelativeImportRegex =
+			/^(?:\s*import\s+(?:type\s+)?(?:[^'";]+from\s+)?["']\.[^"']+["'];?\s*)$/gm;
+		const sanitized = concatenated.replace(residualRelativeImportRegex, "");
+		// Collapse multiple blank lines introduced by removals for neatness.
+		const finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
+		// IMPORTANT: encode sanitized finalCode (previously used unsanitized concatenated)
+		const enc = new TextEncoder().encode(finalCode);
 		let binary = "";
 		for (const b of enc) binary += String.fromCharCode(b);
 		const url = `data:application/typescript;base64,${btoa(binary)}`;
-		cache.set(cacheKey, { url, code: concatenated, mtimeSdk: sdk.mtime, mtimeSvc: svc.mtime });
-		return { dataUrl: url, code: concatenated };
+		cache.set(cacheKey, { url, code: finalCode, mtimeSdk: sdk.mtime, mtimeSvc: svc.mtime });
+		return { dataUrl: url, code: finalCode };
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });
 		throw err;

@@ -1,19 +1,16 @@
 // example_services/photo/service.ts
-import { defineService, none, photoResp, runService } from "../../pbb_sdk/mod.ts";
-import type { CommandEvent } from "../../pbb_sdk/mod.ts";
+import { defineService, none, photoResp, runService } from "../../sdk/mod.ts";
+import type { CommandEvent } from "../../sdk/mod.ts";
+import { PHOTO_COMMAND, PHOTO_SAMPLE_URL, PHOTO_SERVICE_ID, PHOTO_VERSION } from "./constants.ts";
 
 const service = defineService({
-	id: "mock_photo",
-	version: "1.0.0",
+	id: PHOTO_SERVICE_ID,
+	version: PHOTO_VERSION,
 	kind: "single_command",
-	command: "photo",
+	command: PHOTO_COMMAND,
 	description: "Sends a sample photo",
 	handlers: {
-		command: (_ev: CommandEvent) =>
-			photoResp(
-				"https://nexus.pubky.app/static/files/c5nr657md9g8mut1xhjgf9h3cxaio3et9xyupo4fsgi5f7etocey/0033WXE37S700/feed",
-				{ caption: "Here is a kitten!" },
-			),
+		command: (_ev: CommandEvent) => photoResp(PHOTO_SAMPLE_URL, { caption: "Here is a kitten!" }),
 		message: () => none(),
 		callback: () => none(),
 	},

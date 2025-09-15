@@ -1,17 +1,13 @@
 // example_services/flow/service.ts
-import { defineService, none, reply, runService, state } from "../../pbb_sdk/mod.ts";
-import type { CommandEvent, MessageEvent } from "../../pbb_sdk/mod.ts";
-
-interface FlowState {
-	step?: number;
-	first?: string;
-}
+import { defineService, none, reply, runService, state } from "../../sdk/mod.ts";
+import type { CommandEvent, MessageEvent } from "../../sdk/mod.ts";
+import { FLOW_COMMAND, FLOW_SERVICE_ID, FLOW_VERSION, FlowState } from "./constants.ts";
 
 const service = defineService({
-	id: "mock_flow",
-	version: "1.0.0",
+	id: FLOW_SERVICE_ID,
+	version: FLOW_VERSION,
 	kind: "command_flow",
-	command: "flow",
+	command: FLOW_COMMAND,
 	description: "Two-step echo flow",
 	handlers: {
 		command: (ev: CommandEvent) => {

@@ -1,9 +1,11 @@
 {
 	"imports": {
 		"grammy": "https://deno.land/x/grammy@v1.38.2/mod.ts",
-		"@/": "./src/",
 		"@core/": "./src/core/",
 		"@middleware/": "./src/middleware/",
+		"@adapters/": "./src/adapters/",
+		"@schema/": "./src/types/",
+		"@sdk/": "./src/sdk/",
 		"sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts"
 	},
 	"tasks": {

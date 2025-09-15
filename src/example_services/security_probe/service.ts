@@ -1,12 +1,17 @@
 // example_services/security_probe/service.ts
-import { defineService, none, reply, runService } from "../../pbb_sdk/mod.ts";
-import type { CommandEvent } from "../../pbb_sdk/mod.ts";
+import { defineService, none, reply, runService } from "../../sdk/mod.ts";
+import type { CommandEvent } from "../../sdk/mod.ts";
+import {
+	SECURITY_PROBE_COMMAND,
+	SECURITY_PROBE_SERVICE_ID,
+	SECURITY_PROBE_VERSION,
+} from "./constants.ts";
 
 const service = defineService({
-	id: "mock_secprobe",
-	version: "1.0.0",
+	id: SECURITY_PROBE_SERVICE_ID,
+	version: SECURITY_PROBE_VERSION,
 	kind: "single_command",
-	command: "secprobe",
+	command: SECURITY_PROBE_COMMAND,
 	description: "Security probe for env, fs, dynamic import",
 	handlers: {
 		command: async (_ev: CommandEvent) => {

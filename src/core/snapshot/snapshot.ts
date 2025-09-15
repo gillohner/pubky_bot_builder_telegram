@@ -15,7 +15,7 @@ import {
 } from "@core/config/store.ts";
 import { fetchPubkyConfig } from "@core/pubky/pubky.ts";
 import { CONFIG } from "../config.ts";
-import { CommandRoute, ListenerRoute, RoutingSnapshot } from "@/types/routing.ts";
+import type { CommandRoute, ListenerRoute, RoutingSnapshot } from "@schema/routing.ts";
 
 const SNAPSHOT_SCHEMA_VERSION = 1;
 const SNAPSHOT_TTL_MS = 10_000;
@@ -85,7 +85,7 @@ export async function buildSnapshot(
 	}
 
 	// Bundle (SDK + service) for all entries to achieve strongest isolation (data URL modules)
-	const sdkPath = "./src/pbb_sdk/runtime.ts"; // relative path used in dev
+	const sdkPath = "./src/sdk/runtime.ts"; // updated to new sdk location
 	const serviceFiles = [...template.services, ...template.listeners].map((s) => s.entry);
 	// Build or reuse bundles (content-addressed). Store each if new.
 	const built = await Promise.all(serviceFiles.map((p) =>

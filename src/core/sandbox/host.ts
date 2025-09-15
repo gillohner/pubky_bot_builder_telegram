@@ -1,6 +1,6 @@
 // src/core/sandbox/host.ts
 // Moved from src/core/sandbox.ts
-import { ExecutePayload, SandboxCaps, SandboxResult } from "@/types/sandbox.ts";
+import type { ExecutePayload, SandboxCaps, SandboxResult } from "@schema/sandbox.ts";
 
 export class SandboxHost {
 	async run<T = unknown>(
