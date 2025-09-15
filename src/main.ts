@@ -1,5 +1,5 @@
 // src/main.ts
-import bot from "@/bot.ts";
+import bot from "./bot.ts";
 import { webhookCallback } from "grammy";
 
 const useWebhook = Deno.env.get("WEBHOOK") === "1";
