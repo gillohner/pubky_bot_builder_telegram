@@ -6,6 +6,7 @@ export const CONFIG = {
 	debug: (Deno.env.get("DEBUG") ?? "").toLowerCase() === "1",
 	logMinLevel: (Deno.env.get("LOG_MIN_LEVEL") ?? "info").toLowerCase(),
 	logPretty: (Deno.env.get("LOG_PRETTY") ?? "0").toLowerCase() === "1",
+	defaultTemplateId: Deno.env.get("DEFAULT_TEMPLATE_ID") ?? "default",
 };
 
 export function isProd() {

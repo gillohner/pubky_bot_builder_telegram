@@ -1,54 +1,46 @@
-// example_services/flow.ts
-// Multi-step flow using message continuation
+// example_services/flow.ts (SDK version)
+import { defineService, none, reply, runService, state } from "@/sdk/runtime.ts";
 
-async function main() {
-	const dec = new TextDecoder();
-	const cs: Uint8Array[] = [];
-	const stdin = (
-		Deno.stdin as unknown as { readable: ReadableStream<Uint8Array> }
-	).readable;
-	for await (const c of stdin) cs.push(c);
-	const t = new Uint8Array(cs.reduce((n, c) => n + c.length, 0));
-	let o = 0;
-	for (const c of cs) {
-		t.set(c, o);
-		o += c.length;
-	}
-	const raw = dec.decode(t).trim();
-	const payload = raw ? JSON.parse(raw) : { event: null };
-	const ev = payload.event || { type: "unknown" };
-	const st = ev.state || { step: 0 };
-	const step = st.step || 0;
-	type Reply = { kind: "reply"; text: string; state?: unknown };
-	function r(text: string, state?: unknown): Reply {
-		return state ? { kind: "reply", text, state } : { kind: "reply", text };
-	}
-	let body: Record<string, unknown> = { kind: "none" };
-	if (ev.type === "command") {
-		if (step === 0) {
-			body = r("Flow started. Send a message.", {
-				op: "replace",
-				value: { step: 1 },
-			});
-		} else {
-			body = r("Flow already active. Send next message.", {
-				op: "merge",
-				value: { notice: "awaiting" },
-			});
-		}
-	} else if (ev.type === "message") {
-		if (step === 1) {
-			body = r("Got first message. Send another to finish.", {
-				op: "replace",
-				value: { step: 2, first: ev.message?.text || "n/a" },
-			});
-		} else if (step === 2) {
-			body = r(
-				`Done! First="${st.first || ""}" Second="${ev.message?.text || ""}"`,
-				{ op: "clear" },
-			);
-		}
-	}
-	console.log(JSON.stringify(body));
+interface FlowState {
+	step?: number;
+	first?: string;
 }
-await main();
+
+const service = defineService({
+	id: "mock_flow",
+	version: "1.0.0",
+	kind: "command_flow",
+	command: "flow",
+	description: "Two-step echo flow",
+	handlers: {
+		command: (ev) => {
+			const st = (ev.state as FlowState) || { step: 0 };
+			if (!st.step || st.step === 0) {
+				return reply("Flow started. Send a message.", { state: state.replace({ step: 1 }) });
+			}
+			return reply("Flow already active. Send next message.", {
+				state: state.merge({ notice: "awaiting" }),
+			});
+		},
+		message: (ev) => {
+			const st = (ev.state as FlowState) || { step: 0 };
+			if (st.step === 1) {
+				const first = (ev.message as { text?: string })?.text || "n/a";
+				return reply("Got first message. Send another to finish.", {
+					state: state.replace({ step: 2, first }),
+				});
+			}
+			if (st.step === 2) {
+				const second = (ev.message as { text?: string })?.text || "";
+				return reply(`Done! First="${st.first || ""}" Second="${second}"`, {
+					state: state.clear(),
+				});
+			}
+			return none();
+		},
+		callback: () => none(),
+	},
+});
+
+export default service;
+if (import.meta.main) await runService(service);

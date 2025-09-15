@@ -1,18 +1,6 @@
 // src/core/sandbox/host.ts
 // Moved from src/core/sandbox.ts
-export interface SandboxCaps {
-	net?: string[];
-	timeoutMs?: number;
-}
-export interface ExecutePayload {
-	event: unknown;
-	ctx: unknown;
-}
-export interface SandboxResult<T = unknown> {
-	ok: boolean;
-	value?: T;
-	error?: string;
-}
+import { ExecutePayload, SandboxCaps, SandboxResult } from "@/types/sandbox.ts";
 
 export class SandboxHost {
 	async run<T = unknown>(
@@ -28,7 +16,14 @@ export class SandboxHost {
 			return filtered.length ? filtered : undefined;
 		}
 		const _net = sanitizeList(caps.net)?.slice(0, 5);
-		const args: string[] = ["run", "--quiet"]; // no permissions granted
+		// Run with no permissions; also disable remote network module fetching to block dynamic remote imports
+		// This enforces that example services must be fully local. If a service attempts to import a remote URL,
+		// it will fail and we capture the error in the sandbox result.
+		const args: string[] = [
+			"run",
+			"--quiet",
+			"--no-remote", // deny fetching remote modules (dynamic import of URLs will fail)
+		]; // no permissions granted
 		args.push(entry);
 		const cmd = new Deno.Command("deno", {
 			args,

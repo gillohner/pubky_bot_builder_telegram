@@ -19,7 +19,7 @@ function key(p: KeyParts): string {
 }
 
 const DATA = new Map<string, StoredState>();
-// Active flow sessions are now tracked per (chatId,userId) so multiple users in the
+// Active flow sessions are tracked per (chatId,userId) so multiple users in the
 // same group chat can concurrently progress through independent command_flow services.
 // Key format: `${chatId}::${userId}`
 export interface FlowSession {

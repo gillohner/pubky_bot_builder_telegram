@@ -11,6 +11,7 @@ const LEVEL_ORDER: Record<Level, number> = {
 };
 
 function shouldLog(level: Level): boolean {
+	if (isProd()) return false;
 	const min = getMinLevel();
 	if (level === "debug" && !isDebug()) return false;
 	return LEVEL_ORDER[level] >= LEVEL_ORDER[min];

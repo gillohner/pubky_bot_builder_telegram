@@ -1,6 +1,5 @@
-// example_services/keyboard.ts
-// Simple inline keyboard demo: /keyboard shows buttons; callbacks edit the message.
-// Callback data format: svc:mock_keyboard|btn:<id>
+// example_services/keyboard.ts (SDK version)
+import { defineService, edit, none, reply, runService } from "@/sdk/runtime.ts";
 
 interface ButtonDef {
 	id: string;
@@ -12,7 +11,7 @@ const BUTTONS: ButtonDef[] = [
 	{ id: "two", label: "Second", emoji: "2️⃣" },
 ];
 
-function makeKeyboard() {
+function keyboard() {
 	return {
 		inline_keyboard: [
 			BUTTONS.map((b) => ({
@@ -23,49 +22,27 @@ function makeKeyboard() {
 	};
 }
 
-function renderSelection(id: string) {
+function render(id: string): string {
 	const btn = BUTTONS.find((b) => b.id === id);
-	if (!btn) return "Unknown selection";
-	return `You picked: ${btn.label}`;
+	return btn ? `You picked: ${btn.label}` : "Unknown selection";
 }
 
-async function readAll() {
-	const d = new TextDecoder();
-	const cs: Uint8Array[] = [];
-	const stdin = (
-		Deno.stdin as unknown as { readable: ReadableStream<Uint8Array> }
-	).readable;
-	for await (const c of stdin) cs.push(c);
-	const t = new Uint8Array(cs.reduce((n, c) => n + c.length, 0));
-	let o = 0;
-	for (const c of cs) {
-		t.set(c, o);
-		o += c.length;
-	}
-	return d.decode(t).trim();
-}
-const raw = await readAll();
-const payload = raw ? JSON.parse(raw) : { event: null, ctx: null };
-type ServiceEvent =
-	| { type: "command" }
-	| { type: "callback"; data?: string }
-	| { type: string };
-const ev: ServiceEvent = (payload.event as ServiceEvent) || { type: "unknown" };
-let body: Record<string, unknown> = { kind: "none" };
-if (ev.type === "command") {
-	body = {
-		kind: "reply",
-		text: "Tap a button:",
-		options: { reply_markup: makeKeyboard() },
-	};
-} else if (ev.type === "callback") {
-	const data = "data" in ev && typeof ev.data === "string" ? ev.data : "";
-	const m = /\|btn:([^|]+)/.exec(data);
-	const id = m ? m[1] : "";
-	body = {
-		kind: "edit",
-		text: renderSelection(id),
-		options: { reply_markup: makeKeyboard() },
-	};
-}
-console.log(JSON.stringify(body));
+const service = defineService({
+	id: "mock_keyboard",
+	version: "1.0.0",
+	kind: "single_command",
+	command: "keyboard",
+	description: "Shows an inline keyboard and edits on selection",
+	handlers: {
+		command: () => reply("Tap a button:", { options: { reply_markup: keyboard() } }),
+		callback: (ev) => {
+			const m = /\|btn:([^|]+)/.exec(ev.data);
+			const id = m ? m[1]! : "";
+			return edit(render(id), { options: { reply_markup: keyboard() } });
+		},
+		message: () => none(),
+	},
+});
+
+export default service;
+if (import.meta.main) await runService(service);

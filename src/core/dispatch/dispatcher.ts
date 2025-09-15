@@ -2,6 +2,7 @@
 // Moved from src/core/dispatcher.ts
 import { buildSnapshot } from "@core/snapshot/snapshot.ts";
 import { sandboxHost } from "@core/sandbox/host.ts";
+import { getServiceBundle } from "@core/config/store.ts";
 import { log } from "@core/util/logger.ts";
 import {
 	applyStateDirective,
@@ -10,12 +11,9 @@ import {
 	getServiceState,
 	setActiveFlow,
 } from "@core/state/state.ts";
-import {
-	DispatcherResult,
-	SandboxPayload,
-	SERVICE_PROTOCOL_SCHEMA_VERSION,
-	ServiceResponse,
-} from "@core/service_types.ts";
+import { DispatcherResult, ServiceResponse } from "@core/service_types.ts";
+import { SandboxPayload } from "@/types/services.ts";
+import { ExecutePayload } from "@/types/sandbox.ts";
 
 type BaseCtx = { chatId: string; userId: string };
 type CommandEvent = { kind: "command"; command: string; ctx: BaseCtx };
@@ -38,22 +36,23 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			serviceId: route.serviceId,
 		});
 		const payload: SandboxPayload = {
-			event: {
-				type: "command",
-				token: evt.command,
-				state: existing?.value,
-				stateVersion: existing?.version,
-			},
-			ctx: {
-				chatId: evt.ctx.chatId,
-				userId: evt.ctx.userId,
-				serviceConfig: route.config,
-			},
-			manifest: { schemaVersion: SERVICE_PROTOCOL_SCHEMA_VERSION },
+			event: { type: "command", token: evt.command, state: existing?.value },
+			ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+			manifest: { schemaVersion: 1 },
 		};
-		const res = await sandboxHost.run<ServiceResponse>(route.entry, payload, {
-			timeoutMs: 2000,
-		});
+		const bundle = getServiceBundle(route.bundleHash);
+		if (!bundle) {
+			log.error("dispatch.bundle.missing", { bundleHash: route.bundleHash });
+			return { response: { kind: "error", message: "bundle missing" } } as DispatcherResult;
+		}
+		// Pass the payload directly (matches sdk runtime expectation)
+		const res = await sandboxHost.run<ServiceResponse>(
+			bundle.data_url,
+			payload as unknown as ExecutePayload,
+			{
+				timeoutMs: 2000,
+			},
+		);
 		if (!res.ok) {
 			log.error("sandbox.command.error", {
 				command: evt.command,
@@ -130,22 +129,22 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			serviceId: route.serviceId,
 		});
 		const payload: SandboxPayload = {
-			event: {
-				type: "callback",
-				data: evt.data,
-				state: existing?.value,
-				stateVersion: existing?.version,
-			},
-			ctx: {
-				chatId: evt.ctx.chatId,
-				userId: evt.ctx.userId,
-				serviceConfig: route.config,
-			},
-			manifest: { schemaVersion: SERVICE_PROTOCOL_SCHEMA_VERSION },
+			event: { type: "callback", data: evt.data, state: existing?.value },
+			ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+			manifest: { schemaVersion: 1 },
 		};
-		const res = await sandboxHost.run<ServiceResponse>(route.entry, payload, {
-			timeoutMs: 2000,
-		});
+		const bundle = getServiceBundle(route.bundleHash);
+		if (!bundle) {
+			log.error("dispatch.bundle.missing", { bundleHash: route?.bundleHash });
+			return { response: { kind: "error", message: "bundle missing" } };
+		}
+		const res = await sandboxHost.run<ServiceResponse>(
+			bundle.data_url,
+			payload as unknown as ExecutePayload,
+			{
+				timeoutMs: 2000,
+			},
+		);
 		if (!res.ok) {
 			log.error("sandbox.callback.error", { error: res.error, serviceId });
 			return {
@@ -188,19 +187,21 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 					serviceId: route.serviceId,
 				});
 				const payload: SandboxPayload = {
-					event: {
-						type: "message",
-						message: evt.message,
-						state: existing?.value,
-						stateVersion: existing?.version,
-					},
-					ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId },
-					manifest: { schemaVersion: SERVICE_PROTOCOL_SCHEMA_VERSION },
+					event: { type: "message", message: evt.message, state: existing?.value },
+					ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+					manifest: { schemaVersion: 1 },
 				};
+				const bundle = getServiceBundle(route.bundleHash);
+				if (!bundle) {
+					log.error("dispatch.bundle.missing", { bundleHash: route.bundleHash });
+					return { response: { kind: "error", message: "bundle missing" } };
+				}
 				const res = await sandboxHost.run<ServiceResponse>(
-					route.entry,
-					payload,
-					{ timeoutMs: 2000 },
+					bundle.data_url,
+					payload as unknown as ExecutePayload,
+					{
+						timeoutMs: 2000,
+					},
 				);
 				if (!res.ok) {
 					log.error("sandbox.flow.message.error", {
@@ -234,13 +235,20 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		for (const listener of snapshot.listeners) {
 			const payload: SandboxPayload = {
 				event: { type: "message", message: evt.message },
-				ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId },
-				manifest: { schemaVersion: SERVICE_PROTOCOL_SCHEMA_VERSION },
+				ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: listener.config },
+				manifest: { schemaVersion: 1 },
 			};
+			const bundle = getServiceBundle(listener.bundleHash);
+			if (!bundle) {
+				log.error("dispatch.listener.bundle.missing", { bundleHash: listener.bundleHash });
+				continue;
+			}
 			const res = await sandboxHost.run<ServiceResponse>(
-				listener.entry,
-				payload,
-				{ timeoutMs: 1000 },
+				bundle.data_url,
+				payload as unknown as ExecutePayload,
+				{
+					timeoutMs: 1000,
+				},
 			);
 			if (!res.ok) {
 				log.warn("sandbox.listener.error", {

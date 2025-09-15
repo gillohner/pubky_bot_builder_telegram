@@ -13,6 +13,9 @@ executed inside a constrained sandbox with a routing snapshot and a simple in-me
 - Inline keyboard + callback query wiring (extensible)
 - Structured logging + centralized config
 - Minimal service protocol with schema versioning
+- Content-addressed service bundles (deduplicated by hash)
+- Snapshot integrity hashing & source signature tracking
+- Snapshot invalidation & orphan bundle garbage collection utilities
 
 ## Active Flow Sessions (No Repeated /command Needed)
 
@@ -162,6 +165,29 @@ primitives and adjust dispatcher code; avoid prematurely widening the current sy
 
 Sandbox currently executes data URL code with restricted permissions (no fs/env). Always review
 untrusted service code before inclusion.
+
+## Snapshot Integrity & Invalidation
+
+Each snapshot persisted now includes:
+
+- `integrity`: SHA-256 of the canonical JSON form (with `integrity` omitted before hashing)
+- `sourceSig`: Stable SHA-256 derived from the sorted list of referenced service bundle hashes
+
+On load, if an integrity mismatch is detected it is logged and the snapshot is rebuilt. Rebuilds
+also recompute the content-addressed bundles for services (one per service source).
+
+Maintenance helpers (exported from `@core/snapshot`):
+
+- `invalidateSnapshotByConfigHash(configHash)` – remove a persisted snapshot so next dispatch
+  rebuilds it.
+- `gcOrphanBundles()` – delete bundles not referenced by any snapshot (returns `{ deleted, kept }`).
+
+Tests cover: invalidation, orphan GC, and automatic bundle re-generation after manual deletion.
+
+## Barrel Modules
+
+Each major directory now exposes a `mod.ts` re-exporting its public surface to simplify packaging
+and external consumption.
 
 ## License
 

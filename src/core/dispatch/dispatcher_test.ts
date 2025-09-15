@@ -1,5 +1,8 @@
 // src/core/dispatch/dispatcher_test.ts
 import { dispatch } from "@core/dispatch/dispatcher.ts";
+import { initDb } from "@core/config/store.ts";
+// Initialize DB once for all dispatcher tests
+initDb(":memory:");
 
 Deno.test("dispatch handles command event without error", async () => {
 	const res = await dispatch({
@@ -70,6 +73,7 @@ Deno.test(
 		) {
 			throw new Error("Expected edit (or reply fallback) for links callback");
 		}
+		initDb(":memory:");
 	},
 );
 
