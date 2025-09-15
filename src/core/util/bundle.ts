@@ -31,10 +31,10 @@ export async function bundleService(
 			return { dataUrl: prev.url, code: prev.code };
 		}
 		// Strip import of SDK from service (it will be inlined). Simple regex heuristic.
-		const svcCode = svc.code.replace(
-			/import\s+\{[^}]+}\s+from\s+\"[^\"]+sdk\/runtime\.ts\";?/g,
-			"",
-		);
+		// Support legacy path sdk/runtime.ts, new pbb_sdk/mod.ts, alias '@/pbb_sdk/mod.ts', and relative ../../pbb_sdk/mod.ts
+		const sdkImportRegex =
+			/import\s+(?:type\s+)?\{[^}]+}\s+from\s+\"(?:[^\"]+sdk\/runtime\.ts|(?:\.\.?\/)+pbb_sdk\/(?:mod|runtime)\.ts|@\/pbb_sdk\/(?:mod|runtime)\.ts)\";?/g;
+		const svcCode = svc.code.replace(sdkImportRegex, "");
 		const concatenated =
 			`${sdk.code}\n\n// ---- Inlined Service Source: ${servicePath} ----\n${svcCode}`;
 		const enc = new TextEncoder().encode(concatenated);

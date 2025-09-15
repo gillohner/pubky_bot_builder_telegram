@@ -21,6 +21,15 @@ applyTo: "**"
 - Avoid non-null assertions (postfix !); prefer runtime checks.
 - Prefer "=== / !==" over "== / !=".
 - Write tests for all non-trivial code.
+- Use async/await; avoid raw Promises.
+- Use modern JS/TS features (optional chaining, nullish coalescing, etc).
+- Prefer functional programming patterns (map, filter, reduce) over imperative loops.
+- Avoid deeply nested code; prefer early returns and helper functions.
+- Use descriptive variable names and keep scopes small.
+- Document complex logic with comments.
+- Avoid premature optimization; prioritize readability and maintainability.
+- Keep dependencies up to date.
+- Use consistent coding styles (e.g., spacing, indentation) across the codebase. (Deno fmt)
 
 # Project-Specific Guidelines (Augmented)
 

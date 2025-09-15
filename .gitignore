@@ -2,3 +2,4 @@
 .github/instructions/*
 .vscode/*
 .DS_Store
+bot.sqlite
