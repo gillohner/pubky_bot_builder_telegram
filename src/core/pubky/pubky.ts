@@ -31,12 +31,6 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				version: "1.0.0",
 			},
 			{
-				name: "Photo",
-				command: "photo",
-				kind: "single_command",
-				entry: "./src/example_services/photo/service.ts",
-			},
-			{
 				name: "Links",
 				command: "links",
 				kind: "single_command",
