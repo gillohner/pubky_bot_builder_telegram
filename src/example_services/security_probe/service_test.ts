@@ -10,7 +10,9 @@ Deno.test("security probe merged env probe returns structured reply", async () =
 	try {
 		const parsed = JSON.parse(res.text);
 		if (!parsed.report || !parsed.legacy) throw new Error("Missing merged fields");
-		if (!("env" in parsed) || !("import" in parsed)) throw new Error("Top-level probe keys missing");
+		if (!("env" in parsed) || !("import" in parsed)) {
+			throw new Error("Top-level probe keys missing");
+		}
 	} catch (err) {
 		throw new Error("Response not valid JSON: " + (err as Error).message);
 	}

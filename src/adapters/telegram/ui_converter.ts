@@ -143,4 +143,3 @@ export function convertCarousel(carousel: UICarousel): {
 		reply_markup: buttons.length > 0 ? { inline_keyboard: buttons } : undefined,
 	};
 }
-

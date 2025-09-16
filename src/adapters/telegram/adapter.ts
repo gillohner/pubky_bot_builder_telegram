@@ -41,7 +41,11 @@ async function applyReplacementPolicy(ctx: Context, replaceGroup?: string) {
 	const prev = groupLastMessage.get(key);
 	if (prev) await deleteMessageSafe(ctx, prev);
 }
-function recordReplacement(ctx: Context, replaceGroup: string | undefined, newId: number | undefined) {
+function recordReplacement(
+	ctx: Context,
+	replaceGroup: string | undefined,
+	newId: number | undefined,
+) {
 	if (!replaceGroup || !newId) return;
 	const key = groupKey(ctx.chat!.id, replaceGroup);
 	groupLastMessage.set(key, newId);
@@ -283,8 +287,12 @@ async function applyResponseInternal(ctx: Context, resp: ServiceResponse | null)
 		shouldDeleteTrigger = true;
 	}
 	// Replacement/cleanup groups (internal convention via options.replaceGroup / options.cleanupGroup)
-	const replaceGroup = (resp as { options?: Record<string, unknown> }).options?.replaceGroup as string | undefined;
-	const cleanup = (resp as { options?: Record<string, unknown> }).options?.cleanupGroup as string | undefined;
+	const replaceGroup = (resp as { options?: Record<string, unknown> }).options?.replaceGroup as
+		| string
+		| undefined;
+	const cleanup = (resp as { options?: Record<string, unknown> }).options?.cleanupGroup as
+		| string
+		| undefined;
 	if (replaceGroup) await applyReplacementPolicy(ctx, replaceGroup);
 
 	let sentId: number | undefined;

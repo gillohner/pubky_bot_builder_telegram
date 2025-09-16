@@ -1,13 +1,5 @@
 // example_services/links/service.ts
-import {
-	defineService,
-	deleteResp,
-	edit,
-	inlineKeyboard,
-	none,
-	reply,
-	runService,
-} from "@sdk/mod.ts";
+import { defineService, del, edit, inlineKeyboard, none, reply, runService } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
 import {
 	LINK_CATEGORIES,
@@ -45,7 +37,7 @@ const service = defineService({
 			}),
 		callback: (ev: CallbackEvent) => {
 			const data = ev.data;
-			if (data === "cancel") return deleteResp();
+			if (data === "cancel") return del();
 			const match = /^c:(\d+)/.exec(data);
 			const idx = match ? Number(match[1]) : -1;
 			return edit(renderCategory(idx), {

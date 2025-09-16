@@ -18,7 +18,7 @@ interface ManifestLike {
 	version: string;
 	kind: string;
 	schemaVersion: number;
-	command?:  string;
+	command?: string;
 	description?: string;
 }
 

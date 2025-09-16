@@ -90,7 +90,6 @@ Deno.test("UI Demo Service - Complete Carousel Navigation Flow", function () {
 	}
 });
 
-
 Deno.test("UI Demo Service - Edge Cases and Boundary Conditions", function () {
 	// Test carousel navigation at boundaries
 	const atEndEvent: CallbackEvent = {

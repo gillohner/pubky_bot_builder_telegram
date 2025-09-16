@@ -1,13 +1,5 @@
 // example_services/survey/service.ts
-import {
-	defineService,
-	inlineKeyboard,
-	none,
-	photoResp,
-	reply,
-	runService,
-	state,
-} from "@sdk/mod.ts";
+import { defineService, inlineKeyboard, none, photo, reply, runService, state } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import {
 	SURVEY_COLORS,
@@ -111,7 +103,7 @@ const service = defineService({
 						deleteTrigger: true,
 					});
 				}
-				return photoResp(photoRef, {
+				return photo(photoRef, {
 					caption: `Survey complete. Color=${st.color ?? ""} Animal=${st.animal ?? ""}`,
 					state: state.clear(),
 					deleteTrigger: true,
