@@ -85,7 +85,7 @@ export async function buildSnapshot(
 	}
 
 	// Bundle (SDK + service) for all entries to achieve strongest isolation (data URL modules)
-	const sdkPath = "./src/sdk/runtime.ts"; // updated to new sdk location
+	const sdkPath = "./src/sdk/runtime.ts"; // runtime includes all needed functions
 	const serviceFiles = [...template.services, ...template.listeners].map((s) => s.entry);
 	// Build or reuse bundles (content-addressed). Store each if new.
 	const built = await Promise.all(serviceFiles.map((p) =>
@@ -101,10 +101,9 @@ export async function buildSnapshot(
 		if (!existing) {
 			saveServiceBundle({
 				bundle_hash: b.bundleHash,
-				service_id: "unknown", // TODO: real service id when available
-				version: "1.0.0",
 				data_url: b.dataUrl,
-				updated_at: Date.now(),
+				code: b.code,
+				created_at: Date.now(),
 			});
 		}
 	}

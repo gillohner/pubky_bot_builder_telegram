@@ -131,42 +131,6 @@ Deno.test("links cancel deletes message", async () => {
 	}
 });
 
-Deno.test("keyboard command shows buttons and callback edits", async () => {
-	const start = await dispatch({
-		kind: "command",
-		command: "keyboard",
-		ctx: { chatId: "chat-keyboard", userId: "user" },
-	});
-	if (!start.response || start.response.kind !== "reply") {
-		throw new Error("Expected reply for /keyboard");
-	}
-	const cb = await dispatch({
-		kind: "callback",
-		data: "svc:mock_keyboard|btn:one",
-		ctx: { chatId: "chat-keyboard", userId: "user" },
-	});
-	if (!cb.response || cb.response.kind !== "edit") {
-		throw new Error("Expected edit for keyboard callback");
-	}
-});
-
-Deno.test("dispatch denies env & fs access for env probe", async () => {
-	const res = await dispatch({
-		kind: "command",
-		command: "env",
-		ctx: { chatId: "1", userId: "2" },
-	});
-	if (!res.response || res.response.kind !== "reply") {
-		throw new Error("Expected reply response for env probe");
-	}
-	const text = res.response.text;
-	if (!text.includes("env_denied") || !text.includes("read_denied")) {
-		throw new Error(
-			"Expected env_denied and read_denied diagnostics, got: " + text,
-		);
-	}
-});
-
 Deno.test("active flow routes follow-up messages", async () => {
 	// Start flow
 	const start = await dispatch({

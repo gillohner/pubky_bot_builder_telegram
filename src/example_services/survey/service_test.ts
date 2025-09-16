@@ -11,7 +11,7 @@ Deno.test("survey minimal progression", () => {
 	res = survey.handlers.callback(
 		{
 			type: "callback",
-			data: "svc:mock_survey|color:Red",
+			data: "color:Red",
 			...base,
 			state: { stage: 1 },
 		} as CallbackEvent,

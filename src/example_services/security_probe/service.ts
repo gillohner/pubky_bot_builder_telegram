@@ -1,6 +1,6 @@
 // example_services/security_probe/service.ts
-import { defineService, none, reply, runService } from "../../sdk/mod.ts";
-import type { CommandEvent } from "../../sdk/mod.ts";
+import { defineService, none, reply, runService } from "@sdk/mod.ts";
+import type { CommandEvent } from "@sdk/mod.ts";
 import {
 	SECURITY_PROBE_COMMAND,
 	SECURITY_PROBE_SERVICE_ID,
@@ -17,9 +17,10 @@ const service = defineService({
 		command: async (_ev: CommandEvent) => {
 			const report: Record<string, unknown> = {};
 			try { // Env
-				// deno-lint-ignore no-explicit-any
-				const anyDeno: any = globalThis.Deno;
-				report.env = anyDeno?.env?.get ? anyDeno.env.get("BOT_TOKEN") ?? "present" : "no_api";
+				const maybeDeno = (globalThis as {
+					Deno?: { env?: { get?: (k: string) => string | undefined } };
+				}).Deno;
+				report.env = maybeDeno?.env?.get ? maybeDeno.env.get("BOT_TOKEN") ?? "present" : "no_api";
 			} catch (err) {
 				report.env = `error:${(err as Error).name}`;
 			}

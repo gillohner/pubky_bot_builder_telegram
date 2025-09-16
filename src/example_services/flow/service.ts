@@ -1,6 +1,6 @@
 // example_services/flow/service.ts
-import { defineService, none, reply, runService, state } from "../../sdk/mod.ts";
-import type { CommandEvent, MessageEvent } from "../../sdk/mod.ts";
+import { defineService, none, reply, runService, state } from "@sdk/mod.ts";
+import type { CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import { FLOW_COMMAND, FLOW_SERVICE_ID, FLOW_VERSION, FlowState } from "./constants.ts";
 
 const service = defineService({

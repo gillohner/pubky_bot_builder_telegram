@@ -13,6 +13,8 @@ const servicePaths = [
 	"./env_probe/service.ts",
 	"./security_probe/service.ts",
 	"./listener/service.ts",
+	"./media_demo/service.ts",
+	"./ui_demo/service.ts",
 ];
 
 interface ManifestLike {

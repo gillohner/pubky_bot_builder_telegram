@@ -11,7 +11,7 @@ import {
 	getServiceState,
 	setActiveFlow,
 } from "@core/state/state.ts";
-import { DispatcherResult, ServiceResponse } from "@core/service_types.ts";
+import { DispatcherResult, ServiceResponse } from "@schema/services.ts";
 import type { SandboxPayload } from "@schema/services.ts";
 import type { ExecutePayload } from "@schema/sandbox.ts";
 
@@ -129,7 +129,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			serviceId: route.serviceId,
 		});
 		const payload: SandboxPayload = {
-			event: { type: "callback", data: evt.data, state: existing?.value },
+			event: { type: "callback", data: payloadData, state: existing?.value },
 			ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
 			manifest: { schemaVersion: 1 },
 		};

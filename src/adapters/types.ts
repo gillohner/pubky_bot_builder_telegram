@@ -1,7 +1,7 @@
 // src/adapters/types.ts
-// Platform adapter abstraction. For now only telegram implementation.
-import type { ServiceResponse } from "@core/service_types.ts";
+import type { ServiceResponse } from "@schema/services.ts";
 
+// Platform adapter abstraction. For now only telegram implementation.
 export interface AdapterApplyContext {
 	// Opaque platform-specific context object (e.g., grammY Context for Telegram)
 	platformCtx: unknown;

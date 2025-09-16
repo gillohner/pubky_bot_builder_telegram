@@ -13,17 +13,6 @@ export const KEYBOARD_BUTTONS: KeyboardButtonDef[] = [
 	{ id: "two", label: "Second", emoji: "2️⃣" },
 ];
 
-export function buildKeyboardMarkup(): Record<string, unknown> {
-	return {
-		inline_keyboard: [
-			KEYBOARD_BUTTONS.map((b) => ({
-				text: `${b.emoji ?? ""} ${b.label}`.trim(),
-				callback_data: `svc:${KEYBOARD_SERVICE_ID}|btn:${b.id}`,
-			})),
-		],
-	};
-}
-
 export function renderSelection(id: string): string {
 	const btn = KEYBOARD_BUTTONS.find((b) => b.id === id);
 	return btn ? `You picked: ${btn.label}` : "Unknown selection";

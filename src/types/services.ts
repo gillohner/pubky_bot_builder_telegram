@@ -66,13 +66,66 @@ export interface ServiceReplyDelete extends ServiceReplyBase {
 	fallbackText?: string;
 	options?: Record<string, unknown>;
 }
+export interface ServiceReplyAudio extends ServiceReplyBase {
+	kind: "audio";
+	audio: string;
+	duration?: number;
+	title?: string;
+	performer?: string;
+	options?: Record<string, unknown>;
+}
+export interface ServiceReplyVideo extends ServiceReplyBase {
+	kind: "video";
+	video: string;
+	duration?: number;
+	width?: number;
+	height?: number;
+	thumbnail?: string;
+	options?: Record<string, unknown>;
+}
+export interface ServiceReplyDocument extends ServiceReplyBase {
+	kind: "document";
+	document: string;
+	filename?: string;
+	mimeType?: string;
+	options?: Record<string, unknown>;
+}
+export interface ServiceReplyLocation extends ServiceReplyBase {
+	kind: "location";
+	latitude: number;
+	longitude: number;
+	title?: string;
+	address?: string;
+	options?: Record<string, unknown>;
+}
+export interface ServiceReplyContact extends ServiceReplyBase {
+	kind: "contact";
+	phoneNumber: string;
+	firstName: string;
+	lastName?: string;
+	userId?: string;
+	options?: Record<string, unknown>;
+}
+export interface ServiceReplyUI extends ServiceReplyBase {
+	kind: "ui";
+	text?: string;
+	ui: unknown;
+	uiType: "keyboard" | "menu" | "card" | "carousel" | "form";
+	options?: Record<string, unknown>;
+}
 export type ServiceResponse =
 	| ServiceReplyMessage
 	| ServiceReplyEdit
 	| ServiceReplyNone
 	| ServiceReplyError
 	| ServiceReplyPhoto
-	| ServiceReplyDelete;
+	| ServiceReplyDelete
+	| ServiceReplyAudio
+	| ServiceReplyVideo
+	| ServiceReplyDocument
+	| ServiceReplyLocation
+	| ServiceReplyContact
+	| ServiceReplyUI;
 export interface DispatcherResult {
 	response: ServiceResponse | null;
 }

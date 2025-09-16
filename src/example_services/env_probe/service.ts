@@ -1,6 +1,6 @@
 // example_services/env_probe/service.ts
-import { defineService, none, reply, runService } from "../../sdk/mod.ts";
-import type { CommandEvent } from "../../sdk/mod.ts";
+import { defineService, none, reply, runService } from "@sdk/mod.ts";
+import type { CommandEvent } from "@sdk/mod.ts";
 import { ENV_PROBE_COMMAND, ENV_PROBE_SERVICE_ID, ENV_PROBE_VERSION } from "./constants.ts";
 
 const service = defineService({

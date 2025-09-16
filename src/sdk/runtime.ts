@@ -44,20 +44,73 @@ export interface PhotoMessage extends BaseReply {
 export interface DeleteMessage extends BaseReply {
 	kind: "delete";
 }
+export interface AudioMessage extends BaseReply {
+	kind: "audio";
+	audio: string;
+	duration?: number;
+	title?: string;
+	performer?: string;
+}
+export interface VideoMessage extends BaseReply {
+	kind: "video";
+	video: string;
+	duration?: number;
+	width?: number;
+	height?: number;
+	thumbnail?: string;
+}
+export interface DocumentMessage extends BaseReply {
+	kind: "document";
+	document: string;
+	filename?: string;
+	mimeType?: string;
+}
+export interface LocationMessage extends BaseReply {
+	kind: "location";
+	latitude: number;
+	longitude: number;
+	title?: string;
+	address?: string;
+}
+export interface ContactMessage extends BaseReply {
+	kind: "contact";
+	phoneNumber: string;
+	firstName: string;
+	lastName?: string;
+	userId?: string;
+}
+export interface UIMessage extends BaseReply {
+	kind: "ui";
+	ui:
+		| import("./ui.ts").UIKeyboard
+		| import("./ui.ts").UIMenu
+		| import("./ui.ts").UICard
+		| import("./ui.ts").UICarousel
+		| import("./ui.ts").UIForm;
+	uiType: "keyboard" | "menu" | "card" | "carousel" | "form";
+}
 export type ServiceResponse =
 	| ReplyMessage
 	| EditMessage
 	| NoneMessage
 	| ErrorMessage
 	| PhotoMessage
-	| DeleteMessage;
+	| DeleteMessage
+	| AudioMessage
+	| VideoMessage
+	| DocumentMessage
+	| LocationMessage
+	| ContactMessage
+	| UIMessage;
 
 export interface ServiceContext {
 	chatId: string;
 	userId: string;
+	language?: string;
 	serviceConfig?: Record<string, unknown>;
 	state?: Record<string, unknown>;
 	stateVersion?: number;
+	t?: (key: string, params?: Record<string, unknown>) => string;
 }
 
 export type CommandEvent = { type: "command" } & ServiceContext;
@@ -157,6 +210,207 @@ export function deleteResp(): DeleteMessage {
 	return { kind: "delete" };
 }
 
+export function audio(
+	audio: string,
+	opts?: {
+		duration?: number;
+		title?: string;
+		performer?: string;
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): AudioMessage {
+	return {
+		kind: "audio",
+		audio,
+		duration: opts?.duration,
+		title: opts?.title,
+		performer: opts?.performer,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function video(
+	video: string,
+	opts?: {
+		duration?: number;
+		width?: number;
+		height?: number;
+		thumbnail?: string;
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): VideoMessage {
+	return {
+		kind: "video",
+		video,
+		duration: opts?.duration,
+		width: opts?.width,
+		height: opts?.height,
+		thumbnail: opts?.thumbnail,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function document(
+	document: string,
+	opts?: {
+		filename?: string;
+		mimeType?: string;
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): DocumentMessage {
+	return {
+		kind: "document",
+		document,
+		filename: opts?.filename,
+		mimeType: opts?.mimeType,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function location(
+	latitude: number,
+	longitude: number,
+	opts?: {
+		title?: string;
+		address?: string;
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): LocationMessage {
+	return {
+		kind: "location",
+		latitude,
+		longitude,
+		title: opts?.title,
+		address: opts?.address,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function contact(
+	phoneNumber: string,
+	firstName: string,
+	opts?: {
+		lastName?: string;
+		userId?: string;
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): ContactMessage {
+	return {
+		kind: "contact",
+		phoneNumber,
+		firstName,
+		lastName: opts?.lastName,
+		userId: opts?.userId,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function ui(
+	uiElement:
+		| import("./ui.ts").UIKeyboard
+		| import("./ui.ts").UIMenu
+		| import("./ui.ts").UICard
+		| import("./ui.ts").UICarousel
+		| import("./ui.ts").UIForm,
+	uiType: "keyboard" | "menu" | "card" | "carousel" | "form",
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return {
+		kind: "ui",
+		text,
+		ui: uiElement,
+		uiType,
+		options: opts?.options,
+		state: opts?.state,
+		deleteTrigger: opts?.deleteTrigger,
+	};
+}
+
+export function uiKeyboard(
+	keyboard: import("./ui.ts").UIKeyboard,
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return ui(keyboard, "keyboard", text, opts);
+}
+
+export function uiMenu(
+	menu: import("./ui.ts").UIMenu,
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return ui(menu, "menu", text, opts);
+}
+
+export function uiCard(
+	card: import("./ui.ts").UICard,
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return ui(card, "card", text, opts);
+}
+
+export function uiCarousel(
+	carousel: import("./ui.ts").UICarousel,
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return ui(carousel, "carousel", text, opts);
+}
+
+export function uiForm(
+	form: import("./ui.ts").UIForm,
+	text?: string,
+	opts?: {
+		options?: Record<string, unknown>;
+		state?: StateDirective;
+		deleteTrigger?: boolean;
+	},
+): UIMessage {
+	return ui(form, "form", text, opts);
+}
+
 export const state = {
 	replace(value: Record<string, unknown>): StateDirectiveReplace {
 		return { op: "replace", value };
@@ -204,4 +458,85 @@ export async function runService(svc: DefinedService) {
 		resp = error((err as Error).message || "service error");
 	}
 	await Deno.stdout.write(new TextEncoder().encode(JSON.stringify(resp)));
+}
+
+// Inline keyboard builder for Telegram and compatible adapters
+export interface InlineButton {
+	text: string;
+	data: string;
+	hide?: boolean;
+}
+
+export interface InlineKeyboardRowBuilder {
+	button(btn: InlineButton): InlineKeyboardRowBuilder;
+	buttons(btns: InlineButton[]): InlineKeyboardRowBuilder;
+	row(): InlineKeyboardRowBuilder;
+	done(): InlineKeyboardBuilder;
+	build(): Record<string, unknown>;
+}
+
+export class InlineKeyboardBuilder implements InlineKeyboardRowBuilder {
+	private rows: { text: string; callback_data: string }[][] = [];
+	private current: { text: string; callback_data: string }[] = [];
+
+	button(btn: InlineButton): InlineKeyboardRowBuilder {
+		if (!btn.hide) this.current.push({ text: btn.text, callback_data: btn.data });
+		return this;
+	}
+	buttons(btns: InlineButton[]): InlineKeyboardRowBuilder {
+		for (const b of btns) this.button(b);
+		return this;
+	}
+	row(): InlineKeyboardRowBuilder {
+		if (this.current.length) {
+			this.rows.push(this.current);
+			this.current = [];
+		}
+		return this;
+	}
+	done(): InlineKeyboardBuilder {
+		if (this.current.length) this.row();
+		return this;
+	}
+	build(): Record<string, unknown> {
+		this.done();
+		return { inline_keyboard: this.rows };
+	}
+}
+
+export function inlineKeyboard(): InlineKeyboardBuilder {
+	return new InlineKeyboardBuilder();
+}
+
+// Simple i18n helper for services
+export interface I18nMessages {
+	[key: string]: string | I18nMessages;
+}
+
+export function createI18n(messages: I18nMessages, fallbackLang = "en") {
+	return function t(key: string, params?: Record<string, unknown>, lang = fallbackLang): string {
+		const keys = key.split(".");
+		let current: string | I18nMessages = messages[lang] || messages[fallbackLang] || messages;
+
+		for (const k of keys) {
+			if (current && typeof current === "object" && k in current) {
+				current = current[k];
+			} else {
+				return key; // Return key if translation not found
+			}
+		}
+
+		if (typeof current !== "string") {
+			return key;
+		}
+
+		// Simple parameter replacement
+		if (params) {
+			return current.replace(/\{\{(\w+)\}\}/g, (match, param) => {
+				return params[param]?.toString() || match;
+			});
+		}
+
+		return current;
+	};
 }

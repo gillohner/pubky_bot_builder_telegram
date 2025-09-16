@@ -1,7 +1,7 @@
 // src/middleware/response.test.ts
 import { applyServiceResponse } from "@middleware/response.ts"; // shim delegates to platform adapter
 import { defaultAdapter } from "@adapters/registry.ts";
-import type { ServiceResponse } from "@core/service_types.ts";
+import type { ServiceResponse } from "@schema/services.ts";
 import type { Context } from "grammy";
 
 // Minimal mock context

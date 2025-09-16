@@ -49,8 +49,7 @@ Deno.test("active flow TTL expires and sweep cleans up", () => {
 	const active = getActiveFlow("chatT", "userT");
 	if (!active) throw new Error("expected active flow");
 	// Simulate time passing by mutating since (test-only direct cast)
-	// deno-lint-ignore no-explicit-any
-	(active as any).since = Date.now() - 20;
+	(active as { since: number }).since = Date.now() - 20;
 	const expired = getActiveFlow("chatT", "userT");
 	if (expired) throw new Error("expected expired flow to be cleared");
 	// Create two flows and expire one
@@ -59,8 +58,7 @@ Deno.test("active flow TTL expires and sweep cleans up", () => {
 	const actA = getActiveFlow("chatA", "userA");
 	if (!actA) throw new Error("expected actA");
 	// expire A
-	// deno-lint-ignore no-explicit-any
-	(actA as any).since = Date.now() - 10;
+	(actA as { since: number }).since = Date.now() - 10;
 	const removed = sweepExpiredFlows();
 	if (removed < 1) throw new Error("expected at least one removal");
 	if (getActiveFlow("chatA", "userA")) throw new Error("chatA flow should be gone");

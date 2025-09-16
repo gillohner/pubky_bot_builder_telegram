@@ -31,28 +31,10 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				version: "1.0.0",
 			},
 			{
-				name: "Keyboard",
-				command: "keyboard",
-				kind: "single_command",
-				entry: "./src/example_services/keyboard/service.ts",
-			},
-			{
 				name: "Photo",
 				command: "photo",
 				kind: "single_command",
 				entry: "./src/example_services/photo/service.ts",
-			},
-			{
-				name: "Flow",
-				command: "flow",
-				kind: "command_flow",
-				entry: "./src/example_services/flow/service.ts",
-			},
-			{
-				name: "Survey",
-				command: "survey",
-				kind: "command_flow",
-				entry: "./src/example_services/survey/service.ts",
 			},
 			{
 				name: "Links",
@@ -67,10 +49,40 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				entry: "./src/example_services/env_probe/service.ts",
 			},
 			{
+				name: "Survey",
+				command: "survey",
+				kind: "command_flow",
+				entry: "./src/example_services/survey/service.ts",
+			},
+			{
+				name: "Flow",
+				command: "flow",
+				kind: "command_flow",
+				entry: "./src/example_services/flow/service.ts",
+			},
+			{
 				name: "Security Probe",
 				command: "secprobe",
 				kind: "single_command",
 				entry: "./src/example_services/security_probe/service.ts",
+			},
+			{
+				name: "Media Demo",
+				command: "media",
+				kind: "command_flow",
+				entry: "./src/example_services/media_demo/service.ts",
+			},
+			{
+				name: "UI Demo",
+				command: "ui",
+				kind: "command_flow",
+				entry: "./src/example_services/ui_demo/service.ts",
+			},
+			{
+				name: "Keyboard Demo",
+				command: "keyboard",
+				kind: "single_command",
+				entry: "./src/example_services/keyboard/service.ts",
 			},
 		],
 		listeners: [
@@ -106,8 +118,27 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				kind: "single_command",
 				entry: "./src/example_services/security_probe/service.ts",
 			},
+			{
+				name: "UI Demo",
+				command: "ui",
+				kind: "command_flow",
+				entry: "./src/example_services/ui_demo/service.ts",
+			},
+			{
+				name: "Media Demo",
+				command: "media",
+				kind: "command_flow",
+				entry: "./src/example_services/media_demo/service.ts",
+			},
 		],
-		listeners: [],
+		listeners: [
+			{
+				name: "Listener",
+				command: "listener",
+				kind: "listener",
+				entry: "./src/example_services/listener/service.ts",
+			},
+		],
 	},
 };
 

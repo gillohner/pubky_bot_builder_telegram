@@ -117,12 +117,17 @@ export function buildMiddleware() {
 	composer.on("callback_query:data", async (ctx: Context) => {
 		const chatId = String(ctx.chat?.id ?? "");
 		const data = ctx.callbackQuery?.data ?? "";
+		console.log(`🔔 Received callback: ${data} from chat ${chatId}`);
+		log.debug("callback.received", { chatId, data });
+
 		await buildSnapshot(chatId);
 		const result = await dispatch({
 			kind: "callback",
 			data,
 			ctx: { chatId, userId: String(ctx.from?.id ?? "") },
 		});
+
+		console.log(`📤 Dispatch result:`, result.response);
 		await applyServiceResponse(ctx, result.response);
 		await ctx.answerCallbackQuery();
 		log.debug("callback.processed", { chatId, data });

@@ -13,10 +13,9 @@ Deno.test("gc removes orphan bundles", async () => {
 	const fakeHash = await sha256Hex(fakeCode);
 	saveServiceBundle({
 		bundle_hash: fakeHash,
-		service_id: "orphan",
-		version: "1.0.0",
-		data_url: "data:text/plain;base64,",
-		updated_at: Date.now(),
+		data_url: "data:text/plain;base64,Zm9v",
+		code: fakeCode,
+		created_at: Date.now(),
 	});
 	const before = new Set(listAllBundleHashes());
 	assert(before.has(fakeHash), "fake hash should exist before gc");

@@ -1,6 +1,14 @@
 // example_services/survey/service.ts
-import { defineService, none, photoResp, reply, runService, state } from "../../sdk/mod.ts";
-import type { CallbackEvent, CommandEvent, MessageEvent } from "../../sdk/mod.ts";
+import {
+	defineService,
+	inlineKeyboard,
+	none,
+	photoResp,
+	reply,
+	runService,
+	state,
+} from "@sdk/mod.ts";
+import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import {
 	SURVEY_COLORS,
 	SURVEY_COMMAND,
@@ -29,11 +37,15 @@ function asSurveyState(v: unknown): SurveyState | undefined {
 }
 
 function colorKeyboard(selected?: string) {
-	return {
-		inline_keyboard: SURVEY_COLORS.map((
-			c,
-		) => [{ text: selected === c ? `✅ ${c}` : c, callback_data: `svc:mock_survey|color:${c}` }]),
-	};
+	const keyboard = inlineKeyboard();
+
+	for (const color of SURVEY_COLORS) {
+		const text = selected === color ? `✅ ${color}` : color;
+		keyboard.button({ text, data: `svc:mock_survey|color:${color}` });
+		keyboard.row();
+	}
+
+	return keyboard.build();
 }
 
 const service = defineService({
@@ -56,7 +68,7 @@ const service = defineService({
 		},
 		callback: (ev: CallbackEvent) => {
 			const data = ev.data;
-			if (data.startsWith("svc:mock_survey|color:")) {
+			if (data.startsWith("color:")) {
 				const color = data.split("color:")[1];
 				return reply(`Color chosen: ${color}. Now type your favorite animal (min 3 chars).`, {
 					state: state.replace({ stage: 2, color }),

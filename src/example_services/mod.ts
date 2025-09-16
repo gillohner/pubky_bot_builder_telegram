@@ -8,3 +8,5 @@ export * from "./links/mod.ts";
 export * from "./env_probe/mod.ts";
 export * from "./security_probe/mod.ts";
 export * from "./listener/mod.ts";
+export * from "./media_demo/mod.ts";
+export * from "./ui_demo/mod.ts";

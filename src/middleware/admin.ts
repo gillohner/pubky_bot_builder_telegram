@@ -22,8 +22,8 @@ export async function userIsAdmin(ctx: AdminCheckContextLike): Promise<boolean> 
 		try {
 			const admins = await ctx.getChatAdministrators();
 			for (const m of admins) {
-				// deno-lint-ignore no-explicit-any
-				if ((m as any).user?.id === userId) return true;
+				const candidate = m as { user?: { id?: number } };
+				if (candidate.user?.id === userId) return true;
 			}
 			return false;
 		} catch (_err) {

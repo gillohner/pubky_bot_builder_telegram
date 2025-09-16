@@ -15,5 +15,7 @@ if (useWebhook) {
 		return new Response("OK");
 	});
 } else {
+	console.log("🤖 Starting bot in polling mode...");
 	await bot.start();
+	console.log("✅ Bot started successfully and is polling for updates");
 }

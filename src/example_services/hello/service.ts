@@ -1,7 +1,6 @@
 // example_services/hello/service.ts (SDK module version)
-// NOTE: Use relative path for sandbox bundler (data URL) to satisfy Deno's requirement
-// for ./ or ../ prefixes. Aliased path caused failure inside data URL execution.
-import { CommandEvent, defineService, none, reply, runService } from "../../sdk/mod.ts";
+// Uses @sdk import map alias for modern bundling
+import { CommandEvent, defineService, none, reply, runService } from "@sdk/mod.ts";
 import {
 	HELLO_COMMAND,
 	HELLO_DEFAULT_GREETING,

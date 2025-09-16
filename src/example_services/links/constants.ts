@@ -28,15 +28,6 @@ export const LINK_CATEGORIES: LinkCategory[] = [
 	},
 ];
 
-export function buildCategoryKeyboard(): Record<string, unknown> {
-	const rows = LINK_CATEGORIES.map((
-		c,
-		idx,
-	) => [{ text: c.name, callback_data: `svc:${LINKS_SERVICE_ID}|c:${idx}` }]);
-	rows.push([{ text: "✖ Close", callback_data: `svc:${LINKS_SERVICE_ID}|cancel` }]);
-	return { inline_keyboard: rows };
-}
-
 export function renderCategory(idx: number): string {
 	const cat = LINK_CATEGORIES[idx];
 	if (!cat) return "Unknown category";
