@@ -1,4 +1,4 @@
-// example_services/ui_demo/service_test.ts
+// /packages/demo_services/ui_demo/service_test.ts
 import service from "./service.ts";
 import { assertEquals } from "jsr:@std/assert@1";
 import type { CallbackEvent, CommandEvent, ServiceResponse } from "@sdk/mod.ts";

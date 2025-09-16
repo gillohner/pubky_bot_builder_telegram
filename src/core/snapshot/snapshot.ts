@@ -84,13 +84,10 @@ export async function buildSnapshot(
 		template = fetchPubkyConfig("default");
 	}
 
-	// Bundle (SDK + service) for all entries to achieve strongest isolation (data URL modules)
-	const sdkPath = "./src/sdk/runtime.ts"; // runtime includes all needed functions
 	const serviceFiles = [...template.services, ...template.listeners].map((s) => s.entry);
 	// Build or reuse bundles (content-addressed). Store each if new.
 	const built = await Promise.all(serviceFiles.map((p) =>
 		bundleAndHash(
-			sdkPath,
 			p,
 			async (code) => await sha256Hex(code),
 		)

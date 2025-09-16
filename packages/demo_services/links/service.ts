@@ -1,4 +1,4 @@
-// example_services/links/service.ts
+// /packages/demo_services/links/service.ts
 import { defineService, del, edit, inlineKeyboard, none, reply, runService } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
 import {

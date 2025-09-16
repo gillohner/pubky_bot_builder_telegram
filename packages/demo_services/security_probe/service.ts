@@ -1,4 +1,4 @@
-// example_services/security_probe/service.ts
+// /packages/demo_services/security_probe/service.ts
 import { defineService, none, reply, runService } from "@sdk/mod.ts";
 import type { CommandEvent } from "@sdk/mod.ts";
 import {

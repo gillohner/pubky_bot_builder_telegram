@@ -7,10 +7,43 @@ import { log } from "@core/util/logger.ts";
 interface CacheEntry {
 	url: string;
 	code: string;
-	mtimeSdk: number;
-	mtimeSvc: number;
+	sdkSig: string; // signature of sdk files (mtime aggregate)
+	mtimeSvc: number; // service file mtime
 }
 const cache = new Map<string, CacheEntry>();
+
+// SDK signature cache (avoid walking directory each bundle call)
+let cachedSdkSig = "";
+let cachedSdkSigAt = 0;
+const SDK_SIG_TTL_MS = 1000; // recompute at most once per second
+
+async function computeSdkSig(root: string): Promise<string> {
+	const now = Date.now();
+	if (cachedSdkSig && now - cachedSdkSigAt < SDK_SIG_TTL_MS) return cachedSdkSig;
+	const sdkDir = `${root}/packages/sdk`;
+	const mtimes: string[] = [];
+	try {
+		for await (const entry of Deno.readDir(sdkDir)) {
+			if (entry.isFile && entry.name.endsWith(".ts")) {
+				const stat = await Deno.stat(`${sdkDir}/${entry.name}`);
+				mtimes.push(`${entry.name}:${stat.mtime?.getTime() ?? 0}`);
+			} else if (entry.isDirectory && entry.name === "responses") {
+				for await (const sub of Deno.readDir(`${sdkDir}/responses`)) {
+					if (sub.isFile && sub.name.endsWith(".ts")) {
+						const s2 = await Deno.stat(`${sdkDir}/responses/${sub.name}`);
+						mtimes.push(`responses/${sub.name}:${s2.mtime?.getTime() ?? 0}`);
+					}
+				}
+			}
+		}
+	} catch (err) {
+		log.warn("bundleService.sdkSig.error", { error: (err as Error).message });
+	}
+	mtimes.sort();
+	cachedSdkSig = mtimes.join("|");
+	cachedSdkSigAt = now;
+	return cachedSdkSig;
+}
 
 async function readFile(path: string): Promise<{ code: string; mtime: number }> {
 	const info = await Deno.stat(path);
@@ -22,9 +55,10 @@ async function readFile(path: string): Promise<{ code: string; mtime: number }> 
 // Resolve @sdk import to actual file path using deno.json import map
 function resolveImportPath(importPath: string, basePath: string): string | null {
 	if (importPath.startsWith("@sdk/")) {
-		// @sdk/mod.ts -> ./src/sdk/mod.ts (relative to project root)
-		const sdkPath = importPath.replace("@sdk/", "./src/sdk/");
-		return sdkPath;
+		// Map using current import map (@sdk/ -> ./packages/sdk/)
+		// NOTE: We intentionally mirror deno.json rather than parsing it at runtime for speed.
+		// If the import map changes, adjust this mapping & add a test.
+		return importPath.replace("@sdk/", "./packages/sdk/");
 	}
 	if (importPath.startsWith("./")) {
 		// Relative import - resolve relative to the importing file's directory
@@ -41,7 +75,7 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 async function inlineAllImports(
 	entryPath: string,
 	visited: Set<string>,
-	projectRoot: string = "/Users/gillohner/pubky_bot_builder_telegram",
+	projectRoot: string,
 ): Promise<string> {
 	if (visited.has(entryPath)) return ""; // already inlined
 	visited.add(entryPath);
@@ -116,20 +150,25 @@ async function inlineAllImports(
 }
 
 export async function bundleService(
-	sdkPath: string,
 	servicePath: string,
 ): Promise<{ dataUrl: string; code: string }> {
 	try {
-		const cacheKey = `${sdkPath}::${servicePath}`;
-		const [sdk, svc] = await Promise.all([readFile(sdkPath), readFile(servicePath)]);
+		const projectRoot = Deno.cwd();
+		const svcMeta = await readFile(servicePath);
+		const sdkSig = await computeSdkSig(projectRoot);
+		const cacheKey = `${servicePath}::${sdkSig}`;
 		const prev = cache.get(cacheKey);
-		if (prev && prev.mtimeSdk === sdk.mtime && prev.mtimeSvc === svc.mtime) {
+		if (prev && prev.mtimeSvc === svcMeta.mtime && prev.sdkSig === sdkSig) {
 			return { dataUrl: prev.url, code: prev.code };
 		}
 
-		// Start from the service file and inline all dependencies (including SDK)
+		// Start from the service file; inlining will pull in SDK via @sdk/ imports.
 		const visited = new Set<string>();
-		const inlinedService = await inlineAllImports(servicePath, visited);
+		let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
+		// If service forgot to import SDK, inject it explicitly.
+		if (!inlinedService.includes("@sdk/mod.ts")) {
+			inlinedService = `import \"@sdk/mod.ts\";\n${inlinedService}`;
+		}
 
 		// After inlining, strip ANY remaining import statements (they cannot
 		// resolve from a data: URL and would cause "invalid URL: relative URL with a cannot-be-a-base base")
@@ -147,7 +186,7 @@ export async function bundleService(
 		for (const b of enc) binary += String.fromCharCode(b);
 		const url = `data:application/typescript;base64,${btoa(binary)}`;
 
-		cache.set(cacheKey, { url, code: finalCode, mtimeSdk: sdk.mtime, mtimeSvc: svc.mtime });
+		cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime });
 		return { dataUrl: url, code: finalCode };
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });
@@ -161,11 +200,10 @@ export function clearBundleCache() {
 
 // Helper to produce hash (caller can provide sha256 impl) outside to avoid coupling.
 export async function bundleAndHash(
-	sdkPath: string,
 	servicePath: string,
 	hashFn: (code: string) => Promise<string>,
 ): Promise<{ bundleHash: string; dataUrl: string; code: string }> {
-	const { code, dataUrl } = await bundleService(sdkPath, servicePath);
+	const { code, dataUrl } = await bundleService(servicePath);
 	const bundleHash = await hashFn(code);
 	return { bundleHash, dataUrl, code };
 }

@@ -1,4 +1,4 @@
-// example_services/ui_demo/constants.ts
+// /packages/demo_services/ui_demo/constants.ts
 export const UI_DEMO_SERVICE_ID = "ui_demo" as const;
 export const UI_DEMO_VERSION = "1.0.0" as const;
 export const UI_DEMO_COMMAND = "ui" as const;

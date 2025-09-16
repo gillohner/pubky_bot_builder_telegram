@@ -1,4 +1,4 @@
-// example_services/ui_demo/service.ts
+// /packages/demo_services/ui_demo/service.ts
 import {
 	createI18n,
 	defineService,

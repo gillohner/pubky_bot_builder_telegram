@@ -11,7 +11,7 @@ src/
   core/               # Snapshot, dispatch, state, sandbox security, config
   middleware/         # Router, response/application wiring, admin helpers
   adapters/           # Platform adapters (telegram, future: discord, etc.)
-  example_services/   # Example services (hello, flow, survey, etc.)
+  demo_services/   # Example services (hello, flow, survey, etc.)
   bot.ts              # Telegram bot bootstrap using adapter
   main.ts             # Entry point (can wire additional platforms later)
 ```

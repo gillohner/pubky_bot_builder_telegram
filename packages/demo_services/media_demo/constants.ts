@@ -1,4 +1,4 @@
-// example_services/media_demo/constants.ts
+// /packages/demo_services/media_demo/constants.ts
 export const MEDIA_DEMO_SERVICE_ID = "media_demo" as const;
 export const MEDIA_DEMO_VERSION = "1.0.0" as const;
 export const MEDIA_DEMO_COMMAND = "media" as const;

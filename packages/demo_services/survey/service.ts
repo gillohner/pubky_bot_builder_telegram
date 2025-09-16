@@ -1,4 +1,4 @@
-// example_services/survey/service.ts
+// /packages/demo_services/survey/service.ts
 import { defineService, inlineKeyboard, none, photo, reply, runService, state } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import {

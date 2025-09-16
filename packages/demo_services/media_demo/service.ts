@@ -1,4 +1,4 @@
-// example_services/media_demo/service.ts
+// /packages/demo_services/media_demo/service.ts
 import {
 	audio,
 	contact,

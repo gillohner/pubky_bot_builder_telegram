@@ -1,4 +1,4 @@
-// example_services/hello/service.ts (SDK module version)
+// /packages/demo_services/hello/service.ts (SDK module version)
 // Uses @sdk import map alias for modern bundling
 import { CommandEvent, defineService, none, reply, runService } from "@sdk/mod.ts";
 import {

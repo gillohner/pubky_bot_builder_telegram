@@ -1,4 +1,4 @@
-// example_services/media_demo/mod.ts
+// /packages/demo_services/media_demo/mod.ts
 export {
 	MEDIA_DEMO_COMMAND,
 	MEDIA_DEMO_MESSAGES,

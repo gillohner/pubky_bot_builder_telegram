@@ -1,4 +1,4 @@
-// example_services/ui_demo/mod.ts
+// /packages/demo_services/ui_demo/mod.ts
 export {
 	UI_DEMO_COMMAND,
 	UI_DEMO_MESSAGES,
