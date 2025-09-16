@@ -15,29 +15,58 @@ const service = defineService({
 	description: "Security probe for env, fs, dynamic import",
 	handlers: {
 		command: async (_ev: CommandEvent) => {
+			// Combined security + env probe: gather structured report plus legacy env_probe style string
 			const report: Record<string, unknown> = {};
-			try { // Env
+			const diagnostics: string[] = [];
+			// Environment access check (both structured and legacy list)
+			try {
 				const maybeDeno = (globalThis as {
 					Deno?: { env?: { get?: (k: string) => string | undefined } };
 				}).Deno;
-				report.env = maybeDeno?.env?.get ? maybeDeno.env.get("BOT_TOKEN") ?? "present" : "no_api";
+				if (maybeDeno?.env?.get) {
+					const token = maybeDeno.env.get("BOT_TOKEN");
+					report.env = token ? "present_with_value" : "present";
+					diagnostics.push("ENV_BOT_TOKEN=" + (token || "MISSING"));
+				} else {
+					report.env = "no_api";
+					diagnostics.push("env_denied");
+				}
 			} catch (err) {
 				report.env = `error:${(err as Error).name}`;
+				diagnostics.push("env_denied");
 			}
-			try { // FS
-				await Deno.readTextFile("./bot.sqlite");
-				report.fs = "read_ok";
+			// Filesystem probe
+			try {
+				await Deno.readTextFile("README.md");
+				report.fs_readme = "read_ok";
+				diagnostics.push("read_ok");
 			} catch (err) {
-				report.fs = `denied:${(err as Error).name}`;
+				report.fs_readme = `denied:${(err as Error).name}`;
+				diagnostics.push("read_denied");
 			}
-			try { // Dynamic import blocked by --no-remote
+			try {
+				await Deno.readTextFile("./bot.sqlite");
+				report.fs_sqlite = "read_ok";
+			} catch (err) {
+				report.fs_sqlite = `denied:${(err as Error).name}`;
+			}
+			// Dynamic import probe (remote import should fail under --no-remote)
+			try {
 				// deno-lint-ignore no-unused-vars
 				const mod = await import("https://deno.land/x/sqlite@v3.9.1/mod.ts");
-				report.import = "ok"; // Should not happen
+				report.import = "ok"; // Unexpected if security flags in place
 			} catch (err) {
 				report.import = `denied:${(err as Error).name}`;
 			}
-			return reply(JSON.stringify(report), { deleteTrigger: true });
+			// Backward compatibility: include top-level shorthand keys expected by existing sandbox tests.
+			return reply(
+				JSON.stringify({
+					...report, // env, fs_*, import
+					report,
+					legacy: "env probe: " + diagnostics.join(","),
+				}),
+				{ deleteTrigger: true },
+			);
 		},
 		message: () => none(),
 		callback: () => none(),

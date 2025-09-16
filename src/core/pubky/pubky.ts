@@ -37,12 +37,6 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				entry: "./src/example_services/links/service.ts",
 			},
 			{
-				name: "Env Probe",
-				command: "env",
-				kind: "single_command",
-				entry: "./src/example_services/env_probe/service.ts",
-			},
-			{
 				name: "Survey",
 				command: "survey",
 				kind: "command_flow",

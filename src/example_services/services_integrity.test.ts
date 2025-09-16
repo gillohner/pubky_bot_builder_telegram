@@ -7,7 +7,6 @@ const servicePaths = [
 	"./hello/service.ts",
 	"./survey/service.ts",
 	"./links/service.ts",
-	"./env_probe/service.ts",
 	"./security_probe/service.ts",
 	"./listener/service.ts",
 	"./media_demo/service.ts",

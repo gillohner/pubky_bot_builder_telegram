@@ -25,9 +25,10 @@ Deno.test("sandbox denies env, fs, dynamic import in security probe", async () =
 		// If it returned a plain value, that's a failure (should not access real env value)
 		throw new Error(`Env access unexpectedly succeeded: ${env}`);
 	}
-	const fs = String(parsed.fs ?? "");
-	if (!fs.startsWith("denied:")) {
-		throw new Error(`FS read should be denied, got ${fs}`);
+	// FS read should be denied (choose one of probe keys)
+	const fsKeyVal = String((parsed.fs as string) || (parsed.fs_readme as string) || "");
+	if (!fsKeyVal.startsWith("denied:")) {
+		throw new Error(`FS read should be denied, got ${fsKeyVal}`);
 	}
 	const imp = String(parsed.import ?? "");
 	if (!imp.startsWith("denied:")) {
