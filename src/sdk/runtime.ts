@@ -85,9 +85,8 @@ export interface UIMessage extends BaseReply {
 		| import("./ui.ts").UIKeyboard
 		| import("./ui.ts").UIMenu
 		| import("./ui.ts").UICard
-		| import("./ui.ts").UICarousel
-		| import("./ui.ts").UIForm;
-	uiType: "keyboard" | "menu" | "card" | "carousel" | "form";
+		| import("./ui.ts").UICarousel;
+	uiType: "keyboard" | "menu" | "card" | "carousel";
 }
 export type ServiceResponse =
 	| ReplyMessage
@@ -330,9 +329,8 @@ export function ui(
 		| import("./ui.ts").UIKeyboard
 		| import("./ui.ts").UIMenu
 		| import("./ui.ts").UICard
-		| import("./ui.ts").UICarousel
-		| import("./ui.ts").UIForm,
-	uiType: "keyboard" | "menu" | "card" | "carousel" | "form",
+		| import("./ui.ts").UICarousel,
+	uiType: "keyboard" | "menu" | "card" | "carousel",
 	text?: string,
 	opts?: {
 		options?: Record<string, unknown>;
@@ -399,17 +397,6 @@ export function uiCarousel(
 	return ui(carousel, "carousel", text, opts);
 }
 
-export function uiForm(
-	form: import("./ui.ts").UIForm,
-	text?: string,
-	opts?: {
-		options?: Record<string, unknown>;
-		state?: StateDirective;
-		deleteTrigger?: boolean;
-	},
-): UIMessage {
-	return ui(form, "form", text, opts);
-}
 
 export const state = {
 	replace(value: Record<string, unknown>): StateDirectiveReplace {

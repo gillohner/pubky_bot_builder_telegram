@@ -42,22 +42,6 @@ export interface UICarousel {
 	navigation?: boolean;
 }
 
-export interface UIForm {
-	title?: string;
-	fields: UIFormField[];
-	submitButton?: UIButton;
-	cancelButton?: UIButton;
-}
-
-export interface UIFormField {
-	id: string;
-	label: string;
-	type: "text" | "number" | "email" | "password" | "textarea" | "select" | "checkbox";
-	required?: boolean;
-	placeholder?: string;
-	options?: { value: string; label: string }[];
-	defaultValue?: string | number | boolean;
-}
 
 /**
  * Builder for creating cross-platform UI elements.
@@ -91,12 +75,6 @@ export class UIBuilder {
 		return new CarouselBuilder();
 	}
 
-	/**
-	 * Create a form for user input.
-	 */
-	static form(title?: string): FormBuilder {
-		return new FormBuilder(title);
-	}
 }
 
 export class KeyboardBuilder {
@@ -138,7 +116,7 @@ export class KeyboardBuilder {
 	}
 
 	/**
-	 * Set keyboard as inline (default for most platforms).
+	 * Set keyboard as inline
 	 */
 	inline(value = true): this {
 		this.opts.inline = value;
@@ -179,7 +157,6 @@ export class KeyboardBuilder {
 		};
 	}
 }
-
 export class MenuBuilder {
 	private buttons: UIButton[] = [];
 	private title?: string;
@@ -240,7 +217,6 @@ export class MenuBuilder {
 		};
 	}
 }
-
 export class CardBuilder {
 	private title?: string;
 	private desc?: string;
@@ -251,47 +227,35 @@ export class CardBuilder {
 		this.title = title;
 	}
 
-	/**
-	 * Set card description.
-	 */
+	/** Set card description. */
 	description(text: string): this {
 		this.desc = text;
 		return this;
 	}
 
-	/**
-	 * Set card image URL.
-	 */
+	/** Set card image URL. */
 	imageUrl(url: string): this {
 		this.image = url;
 		return this;
 	}
 
-	/**
-	 * Add an action button to the card.
-	 */
+	/** Add an action button to the card. */
 	action(text: string, action: UIButtonAction, style?: UIButton["style"]): this {
 		this.actions.push({ text, action, style });
 		return this;
 	}
 
-	/**
-	 * Add a callback action to the card.
-	 */
+	/** Add a callback action to the card. */
 	callback(text: string, data: string, style?: UIButton["style"]): this {
 		return this.action(text, { type: "callback", data }, style);
 	}
 
-	/**
-	 * Add a URL action to the card.
-	 */
+	/** Add a URL action to the card. */
 	url(text: string, url: string, style?: UIButton["style"]): this {
 		return this.action(text, { type: "url", url }, style);
 	}
 
-	/**
-	 * Build the card object.
-	 */
+	/** Build the card object. */
 	build(): UICard {
 		return {
 			title: this.title,
@@ -306,126 +270,23 @@ export class CarouselBuilder {
 	private items: UICard[] = [];
 	private nav = false;
 
-	/**
-	 * Add a card to the carousel.
-	 */
+	/** Add a card to the carousel. */
 	card(card: UICard): this {
 		this.items.push(card);
 		return this;
 	}
 
-	/**
-	 * Enable navigation controls.
-	 */
+	/** Enable navigation controls. */
 	navigation(enabled = true): this {
 		this.nav = enabled;
 		return this;
 	}
 
-	/**
-	 * Build the carousel object.
-	 */
+	/** Build the carousel object. */
 	build(): UICarousel {
 		return {
 			items: this.items,
 			navigation: this.nav,
-		};
-	}
-}
-
-export class FormBuilder {
-	private title?: string;
-	private fields: UIFormField[] = [];
-	private submitBtn?: UIButton;
-	private cancelBtn?: UIButton;
-
-	constructor(title?: string) {
-		this.title = title;
-	}
-
-	/**
-	 * Add a text field to the form.
-	 */
-	text(
-		id: string,
-		label: string,
-		opts?: { required?: boolean; placeholder?: string; defaultValue?: string },
-	): this {
-		this.fields.push({
-			id,
-			label,
-			type: "text",
-			required: opts?.required,
-			placeholder: opts?.placeholder,
-			defaultValue: opts?.defaultValue,
-		});
-		return this;
-	}
-
-	/**
-	 * Add a number field to the form.
-	 */
-	number(
-		id: string,
-		label: string,
-		opts?: { required?: boolean; placeholder?: string; defaultValue?: number },
-	): this {
-		this.fields.push({
-			id,
-			label,
-			type: "number",
-			required: opts?.required,
-			placeholder: opts?.placeholder,
-			defaultValue: opts?.defaultValue,
-		});
-		return this;
-	}
-
-	/**
-	 * Add a select field to the form.
-	 */
-	select(
-		id: string,
-		label: string,
-		options: { value: string; label: string }[],
-		opts?: { required?: boolean; defaultValue?: string },
-	): this {
-		this.fields.push({
-			id,
-			label,
-			type: "select",
-			options,
-			required: opts?.required,
-			defaultValue: opts?.defaultValue,
-		});
-		return this;
-	}
-
-	/**
-	 * Set submit button.
-	 */
-	submit(text: string, data: string): this {
-		this.submitBtn = { text, action: { type: "callback", data } };
-		return this;
-	}
-
-	/**
-	 * Set cancel button.
-	 */
-	cancel(text: string, data: string): this {
-		this.cancelBtn = { text, action: { type: "callback", data } };
-		return this;
-	}
-
-	/**
-	 * Build the form object.
-	 */
-	build(): UIForm {
-		return {
-			title: this.title,
-			fields: this.fields,
-			submitButton: this.submitBtn,
-			cancelButton: this.cancelBtn,
 		};
 	}
 }

@@ -1,5 +1,5 @@
 // src/types/services.ts
-// Shared service-related type definitions (extracted from core/service_types.ts)
+// Shared service-related type definitions
 export type ServiceKind =
 	| "single_command"
 	| "command_flow"

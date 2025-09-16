@@ -1,7 +1,7 @@
 // src/adapters/telegram/ui_converter.ts
 // Converts cross-platform UI elements to Telegram-specific format
 
-import type { UIButton, UICard, UICarousel, UIForm, UIKeyboard, UIMenu } from "@sdk/ui.ts";
+import type { UIButton, UICard, UICarousel, UIKeyboard, UIMenu } from "@sdk/ui.ts";
 
 // Type for Telegram inline keyboard button
 type TelegramButton = { text: string; callback_data?: string; url?: string };
@@ -144,48 +144,3 @@ export function convertCarousel(carousel: UICarousel): {
 	};
 }
 
-/**
- * Convert cross-platform form to Telegram message.
- * Since Telegram doesn't have native forms, display form information.
- * Form interaction should be handled by the service through proper callback buttons.
- */
-export function convertForm(form: UIForm): {
-	text: string;
-	reply_markup?: { inline_keyboard: TelegramButton[][] };
-} {
-	let text = "";
-
-	if (form.title) {
-		text += `📝 **${form.title}**\n\n`;
-	}
-
-	// List the form fields
-	text += "This form has the following fields:\n";
-
-	form.fields.forEach((field, index) => {
-		const required = field.required ? " (required)" : "";
-		text += `${index + 1}. ${field.label}${required}\n`;
-	});
-
-	const buttons: TelegramButton[][] = [];
-
-	// Add form action buttons (submit/cancel) if defined
-	const actionButtons: TelegramButton[] = [];
-
-	if (form.submitButton) {
-		actionButtons.push(convertButton(form.submitButton));
-	}
-
-	if (form.cancelButton) {
-		actionButtons.push(convertButton(form.cancelButton));
-	}
-
-	if (actionButtons.length > 0) {
-		buttons.push(actionButtons);
-	}
-
-	return {
-		text,
-		reply_markup: buttons.length > 0 ? { inline_keyboard: buttons } : undefined,
-	};
-}

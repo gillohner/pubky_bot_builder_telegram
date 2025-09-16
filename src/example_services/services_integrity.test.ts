@@ -5,9 +5,7 @@ import { assert, assertEquals } from "https://deno.land/std/assert/mod.ts";
 // Dynamically import each service's service.ts to avoid pulling extra indices.
 const servicePaths = [
 	"./hello/service.ts",
-	"./keyboard/service.ts",
 	"./photo/service.ts",
-	"./flow/service.ts",
 	"./survey/service.ts",
 	"./links/service.ts",
 	"./env_probe/service.ts",

@@ -131,35 +131,6 @@ Deno.test("links cancel deletes message", async () => {
 	}
 });
 
-Deno.test("active flow routes follow-up messages", async () => {
-	// Start flow
-	const start = await dispatch({
-		kind: "command",
-		command: "flow",
-		ctx: { chatId: "chat-flow", userId: "user" },
-	});
-	if (!start.response || start.response.kind !== "reply") {
-		throw new Error("Expected reply starting flow");
-	}
-	// Send first message (advances to step 2)
-	const first = await dispatch({
-		kind: "message",
-		message: { text: "first value" },
-		ctx: { chatId: "chat-flow", userId: "user" },
-	});
-	if (!first.response || first.response.kind !== "reply") {
-		throw new Error("Expected reply for first flow message");
-	}
-	// Send second message (should complete and clear)
-	const second = await dispatch({
-		kind: "message",
-		message: { text: "second value" },
-		ctx: { chatId: "chat-flow", userId: "user" },
-	});
-	if (!second.response || second.response.kind !== "reply") {
-		throw new Error("Expected reply for second flow message");
-	}
-});
 
 Deno.test(
 	"survey flow with color callback, invalid animal, and image completion",

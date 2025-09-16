@@ -90,47 +90,6 @@ Deno.test("UI Demo Service - Complete Carousel Navigation Flow", function () {
 	}
 });
 
-Deno.test("UI Demo Service - Complete Form Submission Flow", function () {
-	// Step 1: Start with command
-	const commandEvent: CommandEvent = {
-		type: "command",
-		...mockContext,
-	};
-
-	const initialResponse = service.handlers.command(commandEvent) as ServiceResponse;
-	assertEquals(initialResponse.kind, "ui");
-
-	// Step 2: Click form demo
-	const formDemoEvent: CallbackEvent = {
-		type: "callback",
-		data: "demo_form",
-		...mockContext,
-	};
-
-	const formResponse = service.handlers.callback(formDemoEvent) as ServiceResponse;
-	assertEquals(formResponse.kind, "ui");
-	if (formResponse.kind === "ui") {
-		assertEquals(formResponse.uiType, "form");
-		const form = formResponse.ui as import("@sdk/mod.ts").UIForm;
-		assertEquals(form.title, "Contact Form");
-		assertEquals(form.fields.length, 4); // name, email, topic, rating
-		assertEquals(form.submitButton?.text, "📤 Submit");
-		assertEquals(form.cancelButton?.text, "❌ Cancel");
-	}
-
-	// Step 3: Submit form
-	const submitEvent: CallbackEvent = {
-		type: "callback",
-		data: "action_submit",
-		...mockContext,
-	};
-
-	const submitResponse = service.handlers.callback(submitEvent) as ServiceResponse;
-	assertEquals(submitResponse.kind, "reply");
-	if (submitResponse.kind === "reply") {
-		assertEquals(submitResponse.text, "✅ Form submitted successfully!\n\nTry again?");
-	}
-});
 
 Deno.test("UI Demo Service - Edge Cases and Boundary Conditions", function () {
 	// Test carousel navigation at boundaries

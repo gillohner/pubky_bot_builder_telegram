@@ -8,7 +8,6 @@ import {
 	UIBuilder,
 	uiCard,
 	uiCarousel,
-	uiForm,
 	uiKeyboard,
 	uiMenu,
 } from "@sdk/mod.ts";
@@ -65,7 +64,6 @@ function handleCommand(ev: CommandEvent) {
 		.row()
 		.callback("🎠 Carousel", "svc:mock_ui|demo_carousel")
 		.row()
-		.callback("📝 Form", "svc:mock_ui|demo_form")
 		.build();
 
 	return uiKeyboard(mainMenu, t("welcome"));
@@ -91,17 +89,11 @@ function handleCallback(ev: CallbackEvent) {
 		case "demo_carousel":
 			return showCarouselDemo(t, state);
 
-		case "demo_form":
-			return showFormDemo(t);
-
 		case "carousel_next":
 			return handleCarouselNavigation(t, state, "next");
 
 		case "carousel_prev":
 			return handleCarouselNavigation(t, state, "prev");
-
-		case "action_submit":
-			return handleFormSubmission(t);
 
 		case "back_to_main": {
 			// Create a command event from the callback event
@@ -272,28 +264,4 @@ function handleCarouselNavigation(
 /**
  * Show form demo.
  */
-function showFormDemo(t: (key: string, params?: Record<string, unknown>) => string) {
-	const form = UIBuilder.form("Contact Form")
-		.text("name", "Your Name", { required: true, placeholder: "Enter your name" })
-		.text("email", "Email Address", { required: true, placeholder: "your@email.com" })
-		.select("topic", "Topic", [
-			{ value: "support", label: "Support" },
-			{ value: "feedback", label: "Feedback" },
-			{ value: "other", label: "Other" },
-		], { required: true })
-		.number("rating", "Rating (1-5)", { defaultValue: 5 })
-		.submit("📤 Submit", "svc:mock_ui|action_submit")
-		.cancel("❌ Cancel", "svc:mock_ui|back_to_main")
-		.build();
-
-	return uiForm(form, t("form"));
-}
-
-/**
- * Handle form submission.
- */
-function handleFormSubmission(t: (key: string, params?: Record<string, unknown>) => string) {
-	return reply(t("formSubmitted") + "\n\n" + t("tryAgain"));
-}
-
 if (import.meta.main) await runService(service);

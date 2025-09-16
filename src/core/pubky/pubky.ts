@@ -55,12 +55,6 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				entry: "./src/example_services/survey/service.ts",
 			},
 			{
-				name: "Flow",
-				command: "flow",
-				kind: "command_flow",
-				entry: "./src/example_services/flow/service.ts",
-			},
-			{
 				name: "Security Probe",
 				command: "secprobe",
 				kind: "single_command",
@@ -77,12 +71,6 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				command: "ui",
 				kind: "command_flow",
 				entry: "./src/example_services/ui_demo/service.ts",
-			},
-			{
-				name: "Keyboard Demo",
-				command: "keyboard",
-				kind: "single_command",
-				entry: "./src/example_services/keyboard/service.ts",
 			},
 		],
 		listeners: [

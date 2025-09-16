@@ -97,17 +97,3 @@ Deno.test("UI Demo Service - Carousel Navigation Previous", function () {
 	}
 });
 
-Deno.test("UI Demo Service - Form Submission", function () {
-	const event: CallbackEvent = {
-		type: "callback",
-		data: "action_submit",
-		...mockContext,
-	};
-
-	const response = service.handlers.callback(event) as ServiceResponse;
-
-	assertEquals(response.kind, "reply");
-	if (response.kind === "reply") {
-		assertEquals(response.text, "✅ Form submitted successfully!\n\nTry again?");
-	}
-});

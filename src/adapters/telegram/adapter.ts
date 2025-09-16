@@ -16,13 +16,7 @@ import type {
 } from "@schema/services.ts";
 import { log } from "@core/util/logger.ts";
 import type { AdapterApplyContext, PlatformAdapter } from "@adapters/types.ts";
-import {
-	convertCard,
-	convertCarousel,
-	convertForm,
-	convertKeyboard,
-	convertMenu,
-} from "./ui_converter.ts";
+import { convertCard, convertCarousel, convertKeyboard, convertMenu } from "./ui_converter.ts";
 
 // Narrow helper type for edit options compatibility
 type BasicMessageOptions = Record<string, unknown> | undefined;
@@ -47,7 +41,7 @@ async function applyReplacementPolicy(ctx: Context, replaceGroup?: string) {
 	const prev = groupLastMessage.get(key);
 	if (prev) await deleteMessageSafe(ctx, prev);
 }
-async function recordReplacement(ctx: Context, replaceGroup: string | undefined, newId: number | undefined) {
+function recordReplacement(ctx: Context, replaceGroup: string | undefined, newId: number | undefined) {
 	if (!replaceGroup || !newId) return;
 	const key = groupKey(ctx.chat!.id, replaceGroup);
 	groupLastMessage.set(key, newId);
@@ -253,12 +247,6 @@ async function handleUI(ctx: Context, r: ServiceReplyUI) {
 				break;
 			case "carousel":
 				result = convertCarousel(r.ui as import("@sdk/ui.ts").UICarousel);
-				if (r.text) {
-					result.text = r.text + "\n\n" + result.text;
-				}
-				break;
-			case "form":
-				result = convertForm(r.ui as import("@sdk/ui.ts").UIForm);
 				if (r.text) {
 					result.text = r.text + "\n\n" + result.text;
 				}
