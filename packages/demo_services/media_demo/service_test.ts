@@ -22,16 +22,12 @@ Deno.test("media demo service - command handler", function () {
 	if (response.kind === "ui") {
 		assertEquals(response.uiType, "keyboard");
 		assertEquals(response.text, "Welcome to Media Demo! Choose a media type:");
-		// Validate keyboard structure & callback prefixes
+		// Validate keyboard structure & callback payloads (namespaced with manifest id)
 		const kb = response.ui as import("@sdk/mod.ts").UIKeyboard;
 		const flat = kb.buttons.flat();
 		for (const btn of flat) {
 			assertEquals(btn.action.type, "callback");
-			// Dispatcher will strip this prefix
-			if (btn.action.type === "callback") {
-				// All media buttons should start with svc:mock_media| (dispatcher uses serviceId mock_media)
-				// (UI converter sends full prefix to dispatcher)
-			}
+			// Namespace now uses manifest id (media_demo) at dispatch time
 		}
 	}
 });

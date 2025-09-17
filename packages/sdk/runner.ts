@@ -6,7 +6,13 @@ import type { GenericEvent } from "./events.ts";
 
 interface RawPayload {
 	event: GenericEvent;
-	ctx: { chatId?: string; userId?: string; serviceConfig?: Record<string, unknown> };
+	ctx: {
+		chatId?: string;
+		userId?: string;
+		serviceConfig?: Record<string, unknown>;
+		routeMeta?: { id: string; command: string; description?: string };
+		datasets?: Record<string, unknown>;
+	};
 }
 
 function assertEvent(e: unknown): asserts e is GenericEvent {
@@ -47,12 +53,35 @@ export async function runService(svc: DefinedService) {
 		data?: string;
 		message?: unknown;
 	};
+	// Derive runtime route metadata (host-provided) for automatic manifest alignment
+	const routeMeta = payload.ctx?.routeMeta;
+	if (routeMeta) {
+		// Only override if service opted-in via placeholder tokens to avoid mutating real manifests.
+		const placeholder = "__runtime__";
+		try {
+			if (svc.manifest.id === placeholder) {
+				// manifest object itself is mutable even if parent service was frozen.
+				(svc.manifest as { id: string }).id = routeMeta.id;
+			}
+			if (svc.manifest.command === placeholder) {
+				(svc.manifest as { command: string }).command = routeMeta.command;
+			}
+			if (svc.manifest.description === placeholder && routeMeta.description) {
+				(svc.manifest as { description?: string }).description = routeMeta.description;
+			}
+		} catch (_err) {
+			// Swallow mutation errors; service will fall back to placeholder values.
+		}
+	}
+
 	const ctxBase = {
 		chatId: payload.ctx?.chatId ?? "",
 		userId: payload.ctx?.userId ?? "",
 		serviceConfig: payload.ctx?.serviceConfig,
 		state: evtAny.state,
 		stateVersion: evtAny.stateVersion,
+		routeMeta,
+		datasets: payload.ctx?.datasets,
 	};
 	let resp;
 	try {

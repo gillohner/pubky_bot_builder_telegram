@@ -28,7 +28,7 @@ Deno.test("Live Flow Simulation - Media Demo Service Complete Flow", async funct
 	// Test audio callback
 	const audioResult = await dispatch({
 		kind: "callback",
-		data: "svc:mock_media|audio",
+		data: "svc:media_demo|audio",
 		ctx: {
 			chatId: "test-chat",
 			userId: "test-user",
@@ -41,7 +41,7 @@ Deno.test("Live Flow Simulation - Media Demo Service Complete Flow", async funct
 	// Test video callback
 	const videoResult = await dispatch({
 		kind: "callback",
-		data: "svc:mock_media|video",
+		data: "svc:media_demo|video",
 		ctx: {
 			chatId: "test-chat",
 			userId: "test-user",
@@ -71,7 +71,7 @@ Deno.test("Live Flow Simulation - UI Demo Service Complete Flow", async function
 	// Test carousel demo
 	const carouselResult = await dispatch({
 		kind: "callback",
-		data: "svc:mock_ui|demo_carousel",
+		data: "svc:ui_demo|demo_carousel",
 		ctx: {
 			chatId: "test-chat",
 			userId: "test-user",
@@ -84,7 +84,7 @@ Deno.test("Live Flow Simulation - UI Demo Service Complete Flow", async function
 	// Test form demo
 	const formResult = await dispatch({
 		kind: "callback",
-		data: "svc:mock_ui|demo_form",
+		data: "svc:ui_demo|demo_form",
 		ctx: {
 			chatId: "test-chat",
 			userId: "test-user",

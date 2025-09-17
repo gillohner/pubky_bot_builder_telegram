@@ -37,7 +37,13 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		});
 		const payload: SandboxPayload = {
 			event: { type: "command", token: evt.command, state: existing?.value },
-			ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+			ctx: {
+				chatId: evt.ctx.chatId,
+				userId: evt.ctx.userId,
+				serviceConfig: route.config,
+				routeMeta: route.meta,
+				datasets: route.datasets,
+			},
 			manifest: { schemaVersion: 1 },
 		};
 		const bundle = getServiceBundle(route.bundleHash);
@@ -130,7 +136,13 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		});
 		const payload: SandboxPayload = {
 			event: { type: "callback", data: payloadData, state: existing?.value },
-			ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+			ctx: {
+				chatId: evt.ctx.chatId,
+				userId: evt.ctx.userId,
+				serviceConfig: route.config,
+				routeMeta: route.meta,
+				datasets: route.datasets,
+			},
 			manifest: { schemaVersion: 1 },
 		};
 		const bundle = getServiceBundle(route.bundleHash);
@@ -188,7 +200,13 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				});
 				const payload: SandboxPayload = {
 					event: { type: "message", message: evt.message, state: existing?.value },
-					ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: route.config },
+					ctx: {
+						chatId: evt.ctx.chatId,
+						userId: evt.ctx.userId,
+						serviceConfig: route.config,
+						routeMeta: route.meta,
+						datasets: route.datasets,
+					},
 					manifest: { schemaVersion: 1 },
 				};
 				const bundle = getServiceBundle(route.bundleHash);
@@ -235,7 +253,13 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		for (const listener of snapshot.listeners) {
 			const payload: SandboxPayload = {
 				event: { type: "message", message: evt.message },
-				ctx: { chatId: evt.ctx.chatId, userId: evt.ctx.userId, serviceConfig: listener.config },
+				ctx: {
+					chatId: evt.ctx.chatId,
+					userId: evt.ctx.userId,
+					serviceConfig: listener.config,
+					routeMeta: listener.meta,
+					datasets: listener.datasets,
+				},
 				manifest: { schemaVersion: 1 },
 			};
 			const bundle = getServiceBundle(listener.bundleHash);

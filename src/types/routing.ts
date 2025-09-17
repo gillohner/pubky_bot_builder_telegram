@@ -1,9 +1,16 @@
 // src/types/routing.ts
 // Routing snapshot & route type definitions extracted from snapshot builder.
+export interface RouteMeta {
+	id: string;
+	command: string;
+	description?: string;
+}
 export interface BaseRoute {
-	serviceId: string;
+	serviceId: string; // matches service manifest id
 	bundleHash: string;
 	config?: Record<string, unknown>;
+	meta: RouteMeta;
+	datasets?: Record<string, unknown>; // placeholder for resolved dataset blobs (json / future binary refs)
 }
 export interface CommandRoute extends BaseRoute {
 	kind: "single_command" | "command_flow";

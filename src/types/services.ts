@@ -156,7 +156,13 @@ export interface SandboxManifest {
 }
 export interface SandboxPayload {
 	event: SandboxExecuteEvent;
-	ctx: { chatId: string; userId: string; serviceConfig?: Record<string, unknown> };
+	ctx: {
+		chatId: string;
+		userId: string;
+		serviceConfig?: Record<string, unknown>;
+		routeMeta?: { id: string; command: string; description?: string };
+		datasets?: Record<string, unknown>;
+	};
 	manifest?: SandboxManifest;
 }
 export interface SandboxExecuteResult {

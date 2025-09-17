@@ -14,22 +14,18 @@ import {
 	video,
 } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
-import {
-	MEDIA_DEMO_COMMAND,
-	MEDIA_DEMO_MESSAGES,
-	MEDIA_DEMO_SERVICE_ID,
-	MEDIA_DEMO_VERSION,
-} from "./constants.ts";
+import { MEDIA_DEMO_MESSAGES } from "./constants.ts";
 
 /**
  * Demonstrates new media types and i18n functionality.
  */
+// NOTE: id/command/description will be injected at runtime from routeMeta by the SDK runner.
 const service = defineService({
-	id: MEDIA_DEMO_SERVICE_ID,
-	version: MEDIA_DEMO_VERSION,
+	id: "__runtime__",
+	command: "__runtime__",
+	description: "__runtime__",
+	version: "1.0.0",
 	kind: "command_flow",
-	command: MEDIA_DEMO_COMMAND,
-	description: "Demo of new media types and i18n",
 	handlers: {
 		command: handleCommand,
 		callback: handleCallback,
@@ -47,15 +43,17 @@ function handleCommand(ev: CommandEvent) {
 
 	// Build keyboard using cross-platform UIBuilder for consistency with UI demo
 	const mainMenu = UIBuilder.keyboard()
-		.callback("🎵 Audio", "svc:mock_media|audio")
+		.namespace(service.manifest.id)
+		.callback("🎵 Audio", "audio")
 		.row()
-		.callback("📹 Video", "svc:mock_media|video")
+		.callback("📹 Video", "video")
 		.row()
-		.callback("📄 Document", "svc:mock_media|document")
+		.callback("📄 Document", "document")
 		.row()
-		.callback("📍 Location", "svc:mock_media|location")
+		.callback("📍 Location", "location")
 		.row()
-		.callback("👤 Contact", "svc:mock_media|contact")
+		.callback("👤 Contact", "contact")
+		.inline(false)
 		.build();
 
 	return uiKeyboard(mainMenu, t("welcome"));
@@ -67,7 +65,6 @@ function handleCommand(ev: CommandEvent) {
 function handleCallback(ev: CallbackEvent) {
 	const t = createI18n(MEDIA_DEMO_MESSAGES, ev.language);
 
-	// Dispatcher strips the `svc:mock_media|` prefix; we receive only the media type token.
 	switch (ev.data) {
 		case "audio":
 			return audio(
@@ -77,6 +74,7 @@ function handleCallback(ev: CallbackEvent) {
 					performer: "Sound Effects",
 					duration: 3,
 					options: { caption: t("audio") },
+					deleteTrigger: true,
 				},
 			);
 		case "video":
@@ -87,6 +85,7 @@ function handleCallback(ev: CallbackEvent) {
 					height: 240,
 					duration: 30,
 					options: { caption: t("video") },
+					deleteTrigger: true,
 				},
 			);
 		case "document":
@@ -94,17 +93,20 @@ function handleCallback(ev: CallbackEvent) {
 				filename: "sample.pdf",
 				mimeType: "application/pdf",
 				options: { caption: t("document") },
+				deleteTrigger: true,
 			});
 		case "location":
 			return location(40.7128, -74.0060, {
 				title: "New York City",
 				address: "NYC, NY, USA",
 				options: { caption: t("location", { city: "New York" }) },
+				deleteTrigger: true,
 			});
 		case "contact":
 			return contact("+1234567890", "John", {
 				lastName: "Doe",
 				options: { caption: t("contact", { name: "John Doe" }) },
+				deleteTrigger: true,
 			});
 		default:
 			return reply(t("unknownType"));

@@ -28,3 +28,18 @@ Deno.test("snapshot fake template variant", async () => {
 	assert(!snap.commands.flow, "flow command should not exist in fake template");
 	assert(!snap.commands.survey, "survey command should not exist in fake template");
 });
+
+Deno.test("switching template updates media command token", async () => {
+	// Use a distinct chat id to avoid interference
+	const chatId = "chatMediaSwitch";
+	// First build default snapshot (should expose /media command)
+	const snapDefault = await buildSnapshot(chatId, { force: true });
+	assert(snapDefault.commands.media, "expected /media in default template");
+	assert(!snapDefault.commands["media-test"], "media-test should not exist in default template");
+	// Now switch to fake template
+	setChatConfig(chatId, "fake", { configId: "fake" });
+	// Build WITHOUT force to ensure cache invalidation logic handles config change
+	const snapAfter = await buildSnapshot(chatId);
+	assert(!snapAfter.commands.media, "old /media command should be gone after template switch");
+	assert(snapAfter.commands["media-test"], "expected /media-test after switching to fake template");
+});

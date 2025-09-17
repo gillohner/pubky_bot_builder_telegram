@@ -123,6 +123,7 @@ export class KeyboardBuilder {
 	private rows: UIButton[][] = [];
 	private currentRow: UIButton[] = [];
 	private opts: Partial<UIKeyboard> = {};
+	private ns?: string; // service id for auto callback namespacing
 
 	/**
 	 * Add a button to the current row.
@@ -136,7 +137,19 @@ export class KeyboardBuilder {
 	 * Add a callback button to the current row.
 	 */
 	callback(text: string, data: string, style?: UIButton["style"]): this {
-		return this.button(text, { type: "callback", data }, style);
+		return this.button(text, { type: "callback", data: this.applyNs(data) }, style);
+	}
+
+	/** Set a service namespace used to prefix callback data (svc:<serviceId>|<payload>). */
+	namespace(serviceId: string): this {
+		this.ns = serviceId;
+		return this;
+	}
+
+	private applyNs(data: string): string {
+		if (!this.ns) return data;
+		if (data.startsWith("svc:")) return data; // already namespaced
+		return `svc:${this.ns}|${data}`;
 	}
 
 	/**
@@ -204,6 +217,7 @@ export class MenuBuilder {
 	private title?: string;
 	private desc?: string;
 	private cols = 2;
+	private ns?: string;
 
 	constructor(title?: string) {
 		this.title = title;
@@ -237,7 +251,19 @@ export class MenuBuilder {
 	 * Add a callback button to the menu.
 	 */
 	callback(text: string, data: string, style?: UIButton["style"]): this {
-		return this.button(text, { type: "callback", data }, style);
+		return this.button(text, { type: "callback", data: this.applyNs(data) }, style);
+	}
+
+	/** Set a service namespace used to prefix callback data. */
+	namespace(serviceId: string): this {
+		this.ns = serviceId;
+		return this;
+	}
+
+	private applyNs(data: string): string {
+		if (!this.ns) return data;
+		if (data.startsWith("svc:")) return data;
+		return `svc:${this.ns}|${data}`;
 	}
 
 	/**
@@ -264,6 +290,7 @@ export class CardBuilder {
 	private desc?: string;
 	private image?: string;
 	private actions: UIButton[] = [];
+	private ns?: string;
 
 	constructor(title?: string) {
 		this.title = title;
@@ -289,7 +316,19 @@ export class CardBuilder {
 
 	/** Add a callback action to the card. */
 	callback(text: string, data: string, style?: UIButton["style"]): this {
-		return this.action(text, { type: "callback", data }, style);
+		return this.action(text, { type: "callback", data: this.applyNs(data) }, style);
+	}
+
+	/** Set a service namespace used to prefix callback data. */
+	namespace(serviceId: string): this {
+		this.ns = serviceId;
+		return this;
+	}
+
+	private applyNs(data: string): string {
+		if (!this.ns) return data;
+		if (data.startsWith("svc:")) return data;
+		return `svc:${this.ns}|${data}`;
 	}
 
 	/** Add a URL action to the card. */
@@ -311,6 +350,7 @@ export class CardBuilder {
 export class CarouselBuilder {
 	private items: UICard[] = [];
 	private nav = false;
+	private ns?: string;
 
 	/** Add a card to the carousel. */
 	card(card: UICard): this {
@@ -321,6 +361,12 @@ export class CarouselBuilder {
 	/** Enable navigation controls. */
 	navigation(enabled = true): this {
 		this.nav = enabled;
+		return this;
+	}
+
+	/** Set a service namespace used to prefix internally generated navigation callbacks (future use). */
+	namespace(serviceId: string): this {
+		this.ns = serviceId;
 		return this;
 	}
 

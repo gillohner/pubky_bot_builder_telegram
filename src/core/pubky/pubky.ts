@@ -9,7 +9,7 @@ export interface PubkyServiceSpec {
 	entry: string; // local relative path to service source
 	version?: string; // optional service version (overrides service manifest if provided)
 	source?: string; // origin reference (e.g., jsr:@scope/pkg@version) for future package resolution
-	config?: Record<string, unknown>;
+	config?: Record<string, unknown>; // may contain datasets mapping name -> pubky:// url
 }
 
 export interface PubkyBotConfigTemplate {
@@ -59,6 +59,12 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				command: "ui",
 				kind: "command_flow",
 				entry: "./packages/demo_services/ui_demo/service.ts",
+				config: {
+					datasets: {
+						carousel: "pubky://demo/pub/pubky-bot-builder/datasets/0000000000100",
+						broken: "pubky://demo/pub/pubky-bot-builder/datasets/0000000000999",
+					},
+				},
 			},
 		],
 		listeners: [
@@ -102,7 +108,7 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 			},
 			{
 				name: "Media Demo",
-				command: "media",
+				command: "mediatest",
 				kind: "command_flow",
 				entry: "./packages/demo_services/media_demo/service.ts",
 			},
@@ -115,6 +121,18 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				entry: "./packages/demo_services/listener/service.ts",
 			},
 		],
+	},
+	bad: {
+		configId: "bad",
+		services: [
+			{
+				name: "Bad Dataset",
+				command: "baddata",
+				kind: "single_command",
+				entry: "./packages/demo_services/bad_dataset/service.ts",
+			},
+		],
+		listeners: [],
 	},
 };
 
