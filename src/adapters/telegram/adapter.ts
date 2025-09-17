@@ -17,6 +17,7 @@ import type {
 import { log } from "@core/util/logger.ts";
 import type { AdapterApplyContext, PlatformAdapter } from "@adapters/types.ts";
 import { convertCard, convertCarousel, convertKeyboard, convertMenu } from "./ui_converter.ts";
+import { CONFIG } from "@core/config.ts";
 
 // Narrow helper type for edit options compatibility
 type BasicMessageOptions = Record<string, unknown> | undefined;
@@ -28,8 +29,27 @@ const groupLastMessage = new Map<string, number>();
 function groupKey(chatId: number | string, group: string): string {
 	return `${chatId}:${group}`;
 }
+// --- Pinned Message Protection -------------------------------------------------
+// By default we will NOT delete a pinned message (to avoid nuking curated info).
+async function isPinned(ctx: Context, id: number): Promise<boolean> {
+	try {
+		// getChat returns the currently pinned message (if any); there is only one
+		const chat = await ctx.api.getChat(ctx.chat!.id as number);
+		// @ts-ignore grammy may not include pinned_message type in minimal build
+		const pinned = (chat as unknown as { pinned_message?: { message_id: number } }).pinned_message;
+		return !!pinned && pinned.message_id === id;
+	} catch (_err) {
+		// On failure assume not pinned (fail open) to avoid leaving stale spam.
+		return false;
+	}
+}
+
 async function deleteMessageSafe(ctx: Context, id: number) {
 	try {
+		if (!CONFIG.enableDeletePinned && await isPinned(ctx, id)) {
+			log.debug("delete.skip.pinned", { id });
+			return;
+		}
 		await ctx.api.deleteMessage(ctx.chat!.id, id);
 	} catch (err) {
 		log.debug("replace.delete.failed", { error: (err as Error).message });
@@ -337,6 +357,7 @@ async function applyResponseInternal(ctx: Context, resp: ServiceResponse | null)
 	}
 	if (replaceGroup) await recordReplacement(ctx, replaceGroup, sentId);
 	if (cleanup) await cleanupGroup(ctx, cleanup);
+
 	if (shouldDeleteTrigger) {
 		try {
 			const msg = ctx.msg || ctx.callbackQuery?.message;
@@ -354,4 +375,10 @@ export const telegramAdapter: PlatformAdapter = {
 	async applyResponse(ctx: AdapterApplyContext, resp: ServiceResponse | null) {
 		await applyResponseInternal(ctx.platformCtx as Context, resp);
 	},
+};
+
+// Internal helpers exported ONLY for tests (not part of public API surface)
+export const _internals: Record<string, unknown> = {
+	enableDeletePinned: CONFIG.enableDeletePinned,
+	isPinned,
 };
