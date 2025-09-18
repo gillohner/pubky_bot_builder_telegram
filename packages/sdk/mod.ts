@@ -8,3 +8,17 @@ export * from "./responses/guards.ts";
 export * from "./i18n.ts";
 export * from "./ui.ts"; // includes inlineKeyboard + builders
 export { runService } from "./runner.ts";
+export { SERVICE_PROTOCOL_SCHEMA_VERSION } from "./services_types.ts";
+export type {
+	DispatcherResult,
+	SandboxExecuteEvent,
+	SandboxExecuteEventCallback,
+	SandboxExecuteEventCommand,
+	SandboxExecuteEventMessage,
+	SandboxExecuteResult,
+	SandboxManifest,
+	SandboxPayload,
+	ServiceCapability,
+	ServiceCapabilityRequest,
+	ServiceManifestProtocol,
+} from "./services_types.ts";

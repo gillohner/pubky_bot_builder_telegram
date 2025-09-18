@@ -18,12 +18,21 @@ import type {
 } from "./types.ts";
 import type { UICard, UICarousel, UIKeyboard, UIMenu } from "../ui.ts";
 
+/**
+ * Common options for response helpers.
+ * ttl: seconds until the platform should auto-delete the produced message.
+ * If omitted, platform adapter will fallback to CONFIG.defaultMessageTtl (0 disables).
+ */
 interface BaseOpts {
 	options?: Record<string, unknown>;
 	state?: StateDirective;
 	deleteTrigger?: boolean;
+	ttl?: number; // in seconds
 }
 
+/**
+ * Internal helper constructing a response with shared envelope fields including ttl.
+ */
 function base<K extends ServiceResponse["kind"], P extends Record<string, unknown>>(
 	kind: K,
 	payload: P,
@@ -35,6 +44,7 @@ function base<K extends ServiceResponse["kind"], P extends Record<string, unknow
 		options: opts?.options,
 		state: opts?.state,
 		deleteTrigger: opts?.deleteTrigger,
+		ttl: opts?.ttl,
 	} as unknown as Extract<ServiceResponse, { kind: K }>;
 }
 

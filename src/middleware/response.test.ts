@@ -1,7 +1,7 @@
 // src/middleware/response.test.ts
 import { applyServiceResponse } from "@middleware/response.ts"; // shim delegates to platform adapter
 import { defaultAdapter } from "@adapters/registry.ts";
-import type { ServiceResponse } from "@schema/services.ts";
+import type { ServiceResponse } from "@sdk/mod.ts";
 import type { Context } from "grammy";
 
 // Minimal mock context
@@ -71,7 +71,7 @@ Deno.test("applyServiceResponse handles edit", async () => {
 
 Deno.test("applyServiceResponse handles error", async () => {
 	const ctx = new MockCtx();
-	const resp: ServiceResponse = { kind: "error", message: "Boom" };
+	const resp: ServiceResponse = { kind: "error", text: "Boom" };
 	await applyServiceResponse(ctx as unknown as Context, resp);
 	if (ctx.replies.length !== 1 || !ctx.replies[0].text.includes("Boom")) {
 		throw new Error("Expected error reply containing message");

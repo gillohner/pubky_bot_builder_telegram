@@ -53,7 +53,14 @@ function handleCommand(ev: CommandEvent) {
 		.inline(false)
 		.build();
 
-	return uiKeyboard(mainMenu, t("welcome"));
+	return uiKeyboard(
+		mainMenu,
+		t("welcome"),
+		{
+			deleteTrigger: true,
+			ttl: 5, // auto-delete after 5 seconds
+		},
+	);
 }
 
 /**
@@ -71,7 +78,8 @@ function handleCallback(ev: CallbackEvent) {
 					performer: "Sound Effects",
 					duration: 3,
 					options: { caption: t("audio") },
-					deleteTrigger: true,
+					deleteTrigger: true, // user action (callback) triggers deletion of this message
+					ttl: 5, // auto-delete after 5 seconds, defaults to env variable DEFAULT_MESSAGE_TTL if not set
 				},
 			);
 		case "video":
@@ -83,6 +91,7 @@ function handleCallback(ev: CallbackEvent) {
 					duration: 30,
 					options: { caption: t("video") },
 					deleteTrigger: true,
+					ttl: 0, // no auto-delete
 				},
 			);
 		case "document":

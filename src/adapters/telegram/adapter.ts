@@ -1,23 +1,12 @@
 // src/adapters/telegram/adapter.ts
 // Telegram platform adapter implementing PlatformAdapter interface.
 import type { Context } from "grammy";
-import type {
-	ServiceReplyAudio,
-	ServiceReplyContact,
-	ServiceReplyDelete,
-	ServiceReplyDocument,
-	ServiceReplyEdit,
-	ServiceReplyLocation,
-	ServiceReplyMessage,
-	ServiceReplyPhoto,
-	ServiceReplyUI,
-	ServiceReplyVideo,
-	ServiceResponse,
-} from "@schema/services.ts";
+import type { ServiceResponse } from "@sdk/mod.ts";
 import { log } from "@core/util/logger.ts";
 import type { AdapterApplyContext, PlatformAdapter } from "@adapters/types.ts";
 import { convertCard, convertCarousel, convertKeyboard, convertMenu } from "./ui_converter.ts";
 import { CONFIG } from "@core/config.ts";
+import { trackMessage } from "@core/ttl/store.ts";
 
 // Narrow helper type for edit options compatibility
 type BasicMessageOptions = Record<string, unknown> | undefined;
@@ -78,37 +67,40 @@ async function cleanupGroup(ctx: Context, cleanupGroup?: string) {
 	groupLastMessage.delete(key);
 }
 
-async function handleReply(ctx: Context, r: ServiceReplyMessage) {
+async function handleReply(ctx: Context, r: Extract<ServiceResponse, { kind: "reply" }>) {
 	await ctx.reply(
-		r.text,
+		r.text ?? "", // reply kind expected to carry text; fallback to empty
 		r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
 	);
 }
 
-async function handleEdit(ctx: Context, r: ServiceReplyEdit) {
+async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edit" }>) {
 	try {
 		if (ctx.callbackQuery?.message) {
 			const msg = ctx.callbackQuery.message;
+			const text = r.text ?? "";
 			await ctx.api.editMessageText(
 				ctx.chat!.id,
 				msg.message_id,
-				r.text,
+				text,
 				(r.options
 					? { ...(r.options as Record<string, unknown>) }
 					: undefined) as BasicMessageOptions,
 			);
 		} else if (ctx.msg?.message_id) {
+			const text = r.text ?? "";
 			await ctx.api.editMessageText(
 				ctx.chat!.id,
 				ctx.msg.message_id,
-				r.text,
+				text,
 				(r.options
 					? { ...(r.options as Record<string, unknown>) }
 					: undefined) as BasicMessageOptions,
 			);
 		} else {
+			const text = r.text ?? "";
 			await ctx.reply(
-				r.text,
+				text,
 				r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
 			);
 		}
@@ -134,8 +126,9 @@ async function handleEdit(ctx: Context, r: ServiceReplyEdit) {
 		}
 		log.warn("edit.fallback.reply", { error: err });
 		try {
+			const text = r.text ?? "";
 			await ctx.reply(
-				r.text,
+				text,
 				r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
 			);
 		} catch (replyErr) {
@@ -144,7 +137,7 @@ async function handleEdit(ctx: Context, r: ServiceReplyEdit) {
 	}
 }
 
-async function handlePhoto(ctx: Context, r: ServiceReplyPhoto) {
+async function handlePhoto(ctx: Context, r: Extract<ServiceResponse, { kind: "photo" }>) {
 	try {
 		const msg = await ctx.replyWithPhoto(r.photo, {
 			caption: r.caption,
@@ -157,7 +150,7 @@ async function handlePhoto(ctx: Context, r: ServiceReplyPhoto) {
 	}
 }
 
-async function handleDelete(ctx: Context, r: ServiceReplyDelete) {
+async function handleDelete(ctx: Context, _r: Extract<ServiceResponse, { kind: "delete" }>) {
 	try {
 		const msg = ctx.callbackQuery?.message || ctx.msg;
 		if (msg?.message_id) {
@@ -166,17 +159,11 @@ async function handleDelete(ctx: Context, r: ServiceReplyDelete) {
 		}
 	} catch (err) {
 		log.warn("delete.fallback.reply", { error: err });
-		if (r.fallbackText) {
-			try {
-				await ctx.reply(r.fallbackText);
-			} catch (replyErr) {
-				log.error("delete.fallback.failed", { error: replyErr });
-			}
-		}
+		// Removed unsupported fallbackText property handling
 	}
 }
 
-async function handleAudio(ctx: Context, r: ServiceReplyAudio) {
+async function handleAudio(ctx: Context, r: Extract<ServiceResponse, { kind: "audio" }>) {
 	try {
 		const msg = await ctx.replyWithAudio(r.audio, {
 			duration: r.duration,
@@ -190,7 +177,7 @@ async function handleAudio(ctx: Context, r: ServiceReplyAudio) {
 	}
 }
 
-async function handleVideo(ctx: Context, r: ServiceReplyVideo) {
+async function handleVideo(ctx: Context, r: Extract<ServiceResponse, { kind: "video" }>) {
 	try {
 		const msg = await ctx.replyWithVideo(r.video, {
 			duration: r.duration,
@@ -204,7 +191,7 @@ async function handleVideo(ctx: Context, r: ServiceReplyVideo) {
 	}
 }
 
-async function handleDocument(ctx: Context, r: ServiceReplyDocument) {
+async function handleDocument(ctx: Context, r: Extract<ServiceResponse, { kind: "document" }>) {
 	try {
 		const msg = await ctx.replyWithDocument(r.document);
 		return msg.message_id;
@@ -214,7 +201,7 @@ async function handleDocument(ctx: Context, r: ServiceReplyDocument) {
 	}
 }
 
-async function handleLocation(ctx: Context, r: ServiceReplyLocation) {
+async function handleLocation(ctx: Context, r: Extract<ServiceResponse, { kind: "location" }>) {
 	try {
 		if (r.title || r.address) {
 			const msg = await ctx.replyWithVenue(
@@ -234,7 +221,7 @@ async function handleLocation(ctx: Context, r: ServiceReplyLocation) {
 	}
 }
 
-async function handleContact(ctx: Context, r: ServiceReplyContact) {
+async function handleContact(ctx: Context, r: Extract<ServiceResponse, { kind: "contact" }>) {
 	try {
 		const msg = await ctx.replyWithContact(r.phoneNumber, r.firstName, {
 			last_name: r.lastName,
@@ -246,7 +233,7 @@ async function handleContact(ctx: Context, r: ServiceReplyContact) {
 	}
 }
 
-async function handleUI(ctx: Context, r: ServiceReplyUI) {
+async function handleUI(ctx: Context, r: Extract<ServiceResponse, { kind: "ui" }>) {
 	try {
 		let result: { text: string; reply_markup?: unknown; photo?: string };
 
@@ -254,23 +241,23 @@ async function handleUI(ctx: Context, r: ServiceReplyUI) {
 			case "keyboard":
 				result = {
 					text: r.text || "Choose an option:",
-					reply_markup: convertKeyboard(r.ui as import("@sdk/ui.ts").UIKeyboard),
+					reply_markup: convertKeyboard(r.ui as import("@sdk/mod.ts").UIKeyboard),
 				};
 				break;
 			case "menu":
 				result = {
-					text: r.text || (r.ui as import("@sdk/ui.ts").UIMenu).title || "Menu:",
-					reply_markup: convertMenu(r.ui as import("@sdk/ui.ts").UIMenu),
+					text: r.text || (r.ui as import("@sdk/mod.ts").UIMenu).title || "Menu:",
+					reply_markup: convertMenu(r.ui as import("@sdk/mod.ts").UIMenu),
 				};
 				break;
 			case "card":
-				result = convertCard(r.ui as import("@sdk/ui.ts").UICard);
+				result = convertCard(r.ui as import("@sdk/mod.ts").UICard);
 				if (r.text) {
 					result.text = r.text + "\n\n" + result.text;
 				}
 				break;
 			case "carousel":
-				result = convertCarousel(r.ui as import("@sdk/ui.ts").UICarousel);
+				result = convertCarousel(r.ui as import("@sdk/mod.ts").UICarousel);
 				if (r.text) {
 					result.text = r.text + "\n\n" + result.text;
 				}
@@ -327,9 +314,11 @@ async function applyResponseInternal(ctx: Context, resp: ServiceResponse | null)
 			await handleDelete(ctx, resp);
 			shouldDeleteTrigger = false;
 			break;
-		case "error":
-			await ctx.reply(`⚠️ ${resp.message}`);
+		case "error": {
+			const text = (resp as { text?: string }).text || "Error";
+			await ctx.reply(`⚠️ ${text}`);
 			break;
+		}
 		case "photo":
 			sentId = await handlePhoto(ctx, resp);
 			break;
@@ -357,6 +346,29 @@ async function applyResponseInternal(ctx: Context, resp: ServiceResponse | null)
 	}
 	if (replaceGroup) await recordReplacement(ctx, replaceGroup, sentId);
 	if (cleanup) await cleanupGroup(ctx, cleanup);
+
+	// TTL handling: explicit resp.ttl overrides defaultMessageTtl
+	const ttlSeconds = (resp as { ttl?: number }).ttl ?? CONFIG.defaultMessageTtl;
+	if (sentId && ttlSeconds && ttlSeconds > 0) {
+		// Persist in KV so we can delete on restart (startup cleanup) and schedule best-effort in-process deletion.
+		try {
+			await trackMessage({
+				platform: "telegram",
+				chatId: ctx.chat!.id,
+				messageId: sentId,
+				ttlSeconds,
+			});
+			setTimeout(async () => {
+				try {
+					await ctx.api.deleteMessage(ctx.chat!.id as number, sentId);
+				} catch (_err) {
+					// ignore
+				}
+			}, ttlSeconds * 1000);
+		} catch (err) {
+			log.debug("ttl.track.failed", { error: (err as Error).message });
+		}
+	}
 
 	if (shouldDeleteTrigger) {
 		try {

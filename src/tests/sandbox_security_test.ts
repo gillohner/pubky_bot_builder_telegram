@@ -15,7 +15,11 @@ Deno.test("sandbox denies env, fs, dynamic import in security probe", async () =
 	}
 	let parsed: Record<string, unknown> = {};
 	try {
-		parsed = JSON.parse(res.response.text);
+		const replyText = res.response.text;
+		if (typeof replyText !== "string" || replyText.length === 0) {
+			throw new Error("Security probe reply missing text");
+		}
+		parsed = JSON.parse(replyText);
 	} catch {
 		throw new Error("Probe returned invalid JSON text");
 	}

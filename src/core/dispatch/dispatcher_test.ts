@@ -43,10 +43,15 @@ Deno.test("dispatch executes mock hello command in sandbox", async () => {
 		command: "hello",
 		ctx: { chatId: "1", userId: "2" },
 	});
-	if (!res.response || res.response.kind !== "reply") {
-		throw new Error("Expected reply response kind");
+	const reply = res.response;
+	if (
+		!reply ||
+		reply.kind !== "reply" ||
+		typeof reply.text !== "string"
+	) {
+		throw new Error("Expected reply response kind with text");
 	}
-	if (res.response.kind === "reply" && !res.response.text.includes("Hello")) {
+	if (!reply.text.includes("Hello")) {
 		throw new Error("Reply text did not contain expected greeting");
 	}
 });

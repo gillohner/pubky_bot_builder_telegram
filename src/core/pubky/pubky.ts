@@ -47,6 +47,7 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				command: "secprobe",
 				kind: "single_command",
 				entry: "./packages/demo_services/security_probe/service.ts",
+				config: { admin_only: true },
 			},
 			{
 				name: "Media Demo",

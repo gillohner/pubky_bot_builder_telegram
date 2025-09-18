@@ -1,5 +1,5 @@
 // src/adapters/types.ts
-import type { ServiceResponse } from "@schema/services.ts";
+import type { ServiceResponse } from "@sdk/mod.ts";
 
 // Platform adapter abstraction. For now only telegram implementation.
 export interface AdapterApplyContext {

@@ -8,6 +8,7 @@ export const CONFIG = {
 	logPretty: (Deno.env.get("LOG_PRETTY") ?? "0").toLowerCase() === "1",
 	defaultTemplateId: Deno.env.get("DEFAULT_TEMPLATE_ID") ?? "default",
 	enableDeletePinned: (Deno.env.get("ENABLE_DELETE_PINNED") ?? "0").toLowerCase() === "1",
+	defaultMessageTtl: Number(Deno.env.get("DEFAULT_MESSAGE_TTL") ?? "0"), // in seconds
 };
 
 export function isProd() {

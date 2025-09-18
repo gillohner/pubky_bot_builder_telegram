@@ -9,6 +9,7 @@ export interface BaseReply {
 	options?: Record<string, unknown>;
 	state?: StateDirective;
 	deleteTrigger?: boolean;
+	ttl?: number; // seconds until auto-deletion (overrides CONFIG.defaultMessageTtl if provided)
 }
 export interface ReplyMessage extends BaseReply {
 	kind: "reply";
@@ -21,6 +22,7 @@ export interface NoneMessage extends BaseReply {
 }
 export interface ErrorMessage extends BaseReply {
 	kind: "error";
+	text?: string; // optional human-safe error message
 }
 export interface PhotoMessage extends BaseReply {
 	kind: "photo";

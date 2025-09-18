@@ -6,29 +6,53 @@ import { applyServiceResponse } from "@middleware/response.ts";
 import { isBotCommand, normalizeCommand } from "@core/util/utils.ts";
 import { log } from "@core/util/logger.ts";
 import { fetchPubkyConfig } from "@core/pubky/pubky.ts";
-import { deleteSnapshot, setChatConfig } from "@core/config/store.ts";
+import { setChatConfig } from "@core/config/store.ts";
 import { userIsAdmin } from "@middleware/admin.ts";
 
 // Non-admin commands exposed to users (dynamic services appended later via snapshot)
 const CORE_PUBLIC_COMMANDS: string[] = ["start"]; // plus service commands resolved dynamically
-const CORE_ADMIN_COMMANDS = new Set(["setconfig", "updateconfig"]);
+const CORE_ADMIN_ONLY: string[] = ["setconfig", "updateconfig"]; // maintenance/config operations
+
+function buildCommandLists(allServiceCommands: string[]) {
+	// De-duplicate dynamic commands against core lists
+	const serviceUnique = allServiceCommands.filter((c) =>
+		!CORE_PUBLIC_COMMANDS.includes(c) && !CORE_ADMIN_ONLY.includes(c)
+	);
+	const publicCommands = [...CORE_PUBLIC_COMMANDS, ...serviceUnique].sort();
+	const adminCommands = [...publicCommands, ...CORE_ADMIN_ONLY].sort();
+	return { publicCommands, adminCommands };
+}
 
 async function publishCommands(ctx: Context, chatId: string) {
 	try {
 		const snap = await buildSnapshot(chatId);
 		const serviceCommands = Object.keys(snap.commands);
-		const commandList = [...new Set([...CORE_PUBLIC_COMMANDS, ...serviceCommands])]
-			.filter((c) => !CORE_ADMIN_COMMANDS.has(c))
-			.map((c) => ({ command: c, description: c }));
-		if (commandList.length > 0) {
-			await ctx.api.setMyCommands(commandList, {
+		const { publicCommands, adminCommands } = buildCommandLists(serviceCommands);
+
+		// Map to Telegram BotCommand objects (simple same-name description for now)
+		const toTelegram = (list: string[]) => list.map((c) => ({ command: c, description: c }));
+
+		// 1) Public scope (all chat members)
+		if (publicCommands.length > 0) {
+			await ctx.api.setMyCommands(toTelegram(publicCommands), {
 				scope: { type: "chat", chat_id: Number(chatId) },
+			});
+		}
+
+		// 2) Admin scope (chat administrators). Telegram will show this superset only to admins.
+		if (adminCommands.length > 0) {
+			await ctx.api.setMyCommands(toTelegram(adminCommands), {
+				scope: { type: "chat_administrators", chat_id: Number(chatId) },
 			});
 		}
 	} catch (err) {
 		log.warn("commands.publish.error", { error: (err as Error).message });
 	}
 }
+
+// Test-only export (not part of public runtime API)
+// Allows unit test to invoke command publication with a fabricated context.
+export const _testPublishCommands = publishCommands;
 
 export function buildMiddleware() {
 	const composer = new Composer<Context>();
@@ -57,7 +81,7 @@ export function buildMiddleware() {
 			if (command === "start") {
 				await publishCommands(ctx, chatId);
 				await ctx.reply(
-					"Hi! Commands are now available. Use /setconfig <template> (admins) to set bot config.",
+					"Hi! Commands loaded. Admins see extra maintenance commands.",
 				);
 				return;
 			}
@@ -77,8 +101,9 @@ export function buildMiddleware() {
 				try {
 					const cfg = fetchPubkyConfig(templateId);
 					setChatConfig(chatId, cfg.configId, cfg);
-					deleteSnapshot(chatId); // invalidate persisted snapshot; force rebuild next usage
-					await ctx.reply(`Config set to '${cfg.configId}'. Run /updateconfig to rebuild.`);
+					// Snapshot invalidation: chat-level snapshots removed; config hash change triggers rebuild automatically.
+					await publishCommands(ctx, chatId); // update lists if dynamic commands changed
+					await ctx.reply(`Config set to '${cfg.configId}'. Admin/public command lists refreshed.`);
 				} catch (err) {
 					await ctx.reply(`Config error: ${(err as Error).message}`);
 				}
@@ -93,7 +118,7 @@ export function buildMiddleware() {
 				try {
 					await buildSnapshot(chatId, { force: true });
 					await publishCommands(ctx, chatId);
-					await ctx.reply("Snapshot updated.");
+					await ctx.reply("Snapshot updated; commands refreshed.");
 				} catch (err) {
 					await ctx.reply(`Update failed: ${(err as Error).message}`);
 				}

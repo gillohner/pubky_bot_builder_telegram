@@ -1,6 +1,6 @@
 // Adapter shim: previous module name preserved for backward compatibility.
 import type { Context } from "grammy";
-import type { ServiceResponse } from "@schema/services.ts";
+import type { ServiceResponse } from "@sdk/mod.ts";
 import { defaultAdapter } from "@adapters/registry.ts";
 
 export async function applyServiceResponse(

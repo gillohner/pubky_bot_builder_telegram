@@ -70,7 +70,7 @@ function handleCommand(ev: CommandEvent) {
 		.row()
 		.build();
 
-	return uiKeyboard(mainMenu, t("welcome"));
+	return uiKeyboard(mainMenu, t("welcome"), { deleteTrigger: true, ttl: 0 });
 }
 
 /**

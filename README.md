@@ -6,22 +6,39 @@ executed inside a constrained sandbox with a routing snapshot and a simple in-me
 ## Monorepo Structure (Current)
 
 ```
+packages/
+  sdk/                 # Published SDK (service definition, responses, ui, events, state directives)
 src/
-  sdk/                # Public service authoring SDK (runtime + keyboard)
-  core/               # Snapshot, dispatch, state, sandbox security, config
-  middleware/         # Router, response/application wiring, admin helpers
-  adapters/           # Platform adapters (telegram, future: discord, etc.)
-  demo_services/   # Example services (hello, flow, survey, etc.)
-  bot.ts              # Telegram bot bootstrap using adapter
-  main.ts             # Entry point (can wire additional platforms later)
+  core/                # Snapshot, dispatch, state (in-memory), sandbox security, config + migrations
+  middleware/          # Router, response/application wiring, admin helpers
+  adapters/            # Platform adapters (telegram, future: discord, etc.)
+  demo_services/       # Example services (hello, flow, survey, etc.)
+  bot.ts               # Telegram bot bootstrap using adapter
+  main.ts              # Entry point
 ```
 
-Legacy `pbb_sdk` directory has been removed; all exports are now in `src/sdk`. Update imports to use
-`@sdk/` alias or relative `./sdk/mod.ts`.
+All service-related types (responses, state directives, sandbox payload contract, service kinds) now
+live exclusively in the SDK. Runtime code imports them via the `@sdk/` import map alias. The legacy
+`src/types/services.ts` has been reduced to a deprecation shim and will be removed in a future
+release.
+
+### Database Migrations
+
+The SQLite layer (`core/config/store.ts`) now uses a lightweight migration framework:
+
+- Migrations are defined in `core/config/migrations.ts` as `{ id, name, up }` objects.
+- A `migrations` table records applied migrations (idempotent; only runs new ones).
+- `initDb()` runs all pending migrations after setting pragmatic PRAGMAs (WAL + NORMAL sync).
+- Baseline migration (`id:1`) created initial schema. Migration `id:2` removed the legacy per-chat
+  `snapshots` table; only config-hash keyed snapshots are retained.
+
+Add a new migration by appending to the `migrations` array with the next integer id. Keep each
+migration self-contained and forward-only (no down migrations—prefer additive changes or follow-up
+cleanup migrations). Tests (`migrations_test.ts`) assert idempotency.
 
 ## Features
 
-- Snapshot-driven routing (commands + listeners)
+- Snapshot-driven routing (commands + listeners) via config-hash keyed reusable snapshots
 - Sandboxed service execution (data: URLs; future: remote bundles)
 - In-memory state for multi-step command flows (no database; deliberately ephemeral)
 - Active flow sessions: after invoking a `command_flow` once, plain chat messages are routed to it
@@ -30,8 +47,11 @@ Legacy `pbb_sdk` directory has been removed; all exports are now in `src/sdk`. U
 - Structured logging + centralized config
 - Minimal service protocol with schema versioning
 - Content-addressed service bundles (deduplicated by hash)
+- Unified SDK-exported service protocol & response types (single source of truth)
+- SQLite migration framework (tracked, idempotent)
 - Snapshot integrity hashing & source signature tracking
-- Snapshot invalidation & orphan bundle garbage collection utilities
+- Snapshot invalidation & orphan bundle garbage collection utilities (per-chat snapshot table
+  removed)
 
 ## Active Flow Sessions (No Repeated /command Needed)
 

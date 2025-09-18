@@ -2,17 +2,14 @@
 // SQLite-backed storage for chat configuration records, snapshots, and service bundles.
 // Flow/session state intentionally remains purely in-memory.
 //
-// Schema (created lazily on first init):
+// Schema (managed via migrations):
 // chat_configs(chat_id TEXT PK, config_id TEXT, config_json TEXT, config_hash TEXT, updated_at INTEGER)
-// snapshots(chat_id TEXT PK, snapshot_json TEXT, built_at INTEGER, integrity_hash TEXT)
 // snapshots_by_config(config_hash TEXT PK, snapshot_json TEXT, built_at INTEGER, integrity_hash TEXT)
 // service_bundles(bundle_hash TEXT PK, data_url TEXT, code TEXT, created_at INTEGER)
-//
-// NOTE: Both chat-specific snapshots and config-hash keyed snapshots are kept because
-// a single config template can serve many chats. Chat snapshots can be ephemeral or
-// serve debugging use-cases; config-hash snapshots enable broad reuse & caching.
+// NOTE: Per-chat snapshot table removed in migration 2; we rely solely on config-hash snapshots for reuse.
 
 import { DB } from "sqlite";
+import { runMigrations } from "@core/config/migrations.ts";
 import type { RoutingSnapshot } from "@schema/routing.ts";
 
 let db: DB | null = null;
@@ -45,43 +42,9 @@ export interface ServiceBundleRecord {
 export function initDb(path = Deno.env.get("LOCAL_DB_URL") || "./bot.sqlite"): void {
 	if (db) return;
 	db = new DB(path);
-	db.execute(`
-        PRAGMA journal_mode = WAL;
-        PRAGMA synchronous = NORMAL;
-    `);
-	db.execute(`
-        CREATE TABLE IF NOT EXISTS chat_configs (
-            chat_id TEXT PRIMARY KEY,
-            config_id TEXT NOT NULL,
-            config_json TEXT NOT NULL,
-            config_hash TEXT,
-            updated_at INTEGER NOT NULL
-        );
-    `);
-	db.execute(`
-        CREATE TABLE IF NOT EXISTS snapshots (
-            chat_id TEXT PRIMARY KEY,
-            snapshot_json TEXT NOT NULL,
-            built_at INTEGER NOT NULL,
-            integrity_hash TEXT NOT NULL
-        );
-    `);
-	db.execute(`
-        CREATE TABLE IF NOT EXISTS snapshots_by_config (
-            config_hash TEXT PRIMARY KEY,
-            snapshot_json TEXT NOT NULL,
-            built_at INTEGER NOT NULL,
-            integrity_hash TEXT NOT NULL
-        );
-    `);
-	db.execute(`
-        CREATE TABLE IF NOT EXISTS service_bundles (
-            bundle_hash TEXT PRIMARY KEY,
-            data_url TEXT NOT NULL,
-            code TEXT NOT NULL,
-            created_at INTEGER NOT NULL
-        );
-    `);
+	db.execute(`PRAGMA journal_mode = WAL;`);
+	db.execute(`PRAGMA synchronous = NORMAL;`);
+	runMigrations(db);
 }
 
 function ensureDb(): DB {
@@ -178,34 +141,7 @@ export function deleteSnapshotByConfigHash(configHash: string): void {
 // ---------------------------------------------------------------------------
 // Chat-id keyed snapshots (auxiliary / debugging usage)
 // ---------------------------------------------------------------------------
-export function saveSnapshot(chatId: string, snapshot: RoutingSnapshot): void {
-	const database = ensureDb();
-	const json = JSON.stringify(snapshot);
-	const integrity = sha256HexSync(json);
-	database.query(
-		`INSERT INTO snapshots (chat_id, snapshot_json, built_at, integrity_hash)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(chat_id) DO UPDATE SET
-           snapshot_json=excluded.snapshot_json,
-           built_at=excluded.built_at,
-           integrity_hash=excluded.integrity_hash`,
-		[chatId, json, snapshot.builtAt ?? Date.now(), integrity],
-	);
-}
-
-export function loadSnapshot(chatId: string): { snapshot_json: string } | undefined {
-	const database = ensureDb();
-	const row = database
-		.query<[string]>(`SELECT snapshot_json FROM snapshots WHERE chat_id = ?`, [chatId])
-		.at(0);
-	if (!row) return undefined;
-	return { snapshot_json: row[0] };
-}
-
-export function deleteSnapshot(chatId: string): void {
-	const database = ensureDb();
-	database.query(`DELETE FROM snapshots WHERE chat_id = ?`, [chatId]);
-}
+// (Removed) saveSnapshot/loadSnapshot/deleteSnapshot – replaced by config-hash keyed variants only.
 
 // ---------------------------------------------------------------------------
 // Service Bundles (content-addressed)

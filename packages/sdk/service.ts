@@ -3,7 +3,7 @@
 import type { CallbackEvent, CommandEvent, MessageEvent } from "./events.ts";
 import type { ServiceResponse } from "./responses/types.ts";
 
-export type ServiceKind = "single_command" | "command_flow" | "listener";
+export type ServiceKind = "single_command" | "command_flow" | "listener" | "periodic_command";
 
 export interface ServiceDefinition {
 	id?: string; // optional - injected if omitted

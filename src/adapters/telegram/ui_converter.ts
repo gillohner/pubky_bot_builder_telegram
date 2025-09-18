@@ -1,7 +1,7 @@
 // src/adapters/telegram/ui_converter.ts
 // Converts cross-platform UI elements to Telegram-specific format
 
-import type { UIButton, UICard, UICarousel, UIKeyboard, UIMenu } from "@sdk/ui.ts";
+import type { UIButton, UICard, UICarousel, UIKeyboard, UIMenu } from "@sdk/mod.ts";
 
 // Type for Telegram inline keyboard button
 type TelegramButton = { text: string; callback_data?: string; url?: string };

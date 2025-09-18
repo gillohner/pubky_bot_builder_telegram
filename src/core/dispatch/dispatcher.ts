@@ -11,8 +11,9 @@ import {
 	getServiceState,
 	setActiveFlow,
 } from "@core/state/state.ts";
-import { DispatcherResult, ServiceResponse } from "@schema/services.ts";
-import type { SandboxPayload } from "@schema/services.ts";
+import { DispatcherResult } from "@sdk/mod.ts";
+import type { ServiceResponse } from "@sdk/mod.ts";
+import type { SandboxPayload } from "@sdk/mod.ts";
 import type { ExecutePayload } from "@schema/sandbox.ts";
 
 type BaseCtx = { chatId: string; userId: string };
@@ -49,7 +50,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		const bundle = getServiceBundle(route.bundleHash);
 		if (!bundle) {
 			log.error("dispatch.bundle.missing", { bundleHash: route.bundleHash });
-			return { response: { kind: "error", message: "bundle missing" } } as DispatcherResult;
+			return { response: { kind: "error", text: "bundle missing" } } as DispatcherResult;
 		}
 		// Pass the payload directly (matches sdk runtime expectation)
 		const res = await sandboxHost.run<ServiceResponse>(
@@ -64,9 +65,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				command: evt.command,
 				error: res.error,
 			});
-			return {
-				response: { kind: "error", message: res.error ?? "sandbox error" },
-			};
+			return { response: { kind: "error", text: res.error ?? "sandbox error" } };
 		}
 		log.debug("sandbox.command.ok", { command: evt.command });
 		// Apply state directive if present
@@ -148,7 +147,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		const bundle = getServiceBundle(route.bundleHash);
 		if (!bundle) {
 			log.error("dispatch.bundle.missing", { bundleHash: route?.bundleHash });
-			return { response: { kind: "error", message: "bundle missing" } };
+			return { response: { kind: "error", text: "bundle missing" } };
 		}
 		const res = await sandboxHost.run<ServiceResponse>(
 			bundle.data_url,
@@ -159,9 +158,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		);
 		if (!res.ok) {
 			log.error("sandbox.callback.error", { error: res.error, serviceId });
-			return {
-				response: { kind: "error", message: res.error ?? "sandbox error" },
-			};
+			return { response: { kind: "error", text: res.error ?? "sandbox error" } };
 		}
 		if (res.value?.state) {
 			const after = applyStateDirective({
@@ -212,7 +209,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				const bundle = getServiceBundle(route.bundleHash);
 				if (!bundle) {
 					log.error("dispatch.bundle.missing", { bundleHash: route.bundleHash });
-					return { response: { kind: "error", message: "bundle missing" } };
+					return { response: { kind: "error", text: "bundle missing" } };
 				}
 				const res = await sandboxHost.run<ServiceResponse>(
 					bundle.data_url,
@@ -226,9 +223,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 						error: res.error,
 						serviceId: route.serviceId,
 					});
-					return {
-						response: { kind: "error", message: res.error ?? "sandbox error" },
-					};
+					return { response: { kind: "error", text: res.error ?? "sandbox error" } };
 				}
 				if (res.value?.state) {
 					const after = applyStateDirective({
