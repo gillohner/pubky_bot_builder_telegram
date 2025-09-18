@@ -14,17 +14,14 @@ import {
 	video,
 } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
-import { MEDIA_DEMO_MESSAGES } from "./constants.ts";
+import { MEDIA_DEMO_MESSAGES, MEDIA_DEMO_VERSION } from "./constants.ts";
 
 /**
  * Demonstrates new media types and i18n functionality.
  */
 // NOTE: id/command/description will be injected at runtime from routeMeta by the SDK runner.
 const service = defineService({
-	id: "__runtime__",
-	command: "__runtime__",
-	description: "__runtime__",
-	version: "1.0.0",
+	version: MEDIA_DEMO_VERSION,
 	kind: "command_flow",
 	handlers: {
 		command: handleCommand,

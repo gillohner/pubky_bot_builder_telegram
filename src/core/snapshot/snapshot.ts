@@ -154,30 +154,28 @@ export async function buildSnapshot(
 			return undefined;
 		}
 	}
-	// Helper to dynamically import a service module and extract manifest
+	// Helper to dynamically import a service module and extract manifest (placeholders become runtime-injected values)
 	async function loadMeta(entry: string, command: string): Promise<RouteMeta> {
 		try {
-			// Use cache bust to avoid stale during dev snapshot rebuilds
 			const mod = await import(`${entry}?metaBust=${crypto.randomUUID()}`);
 			const svc = mod.default as {
-				manifest?: { id: string; command: string; description?: string };
+				manifest?: { id?: string; command?: string; description?: string };
 			};
-			if (svc?.manifest?.id) {
-				const PLACEHOLDER = "__runtime__";
-				return {
-					id: svc.manifest.id === PLACEHOLDER ? `mock_${command}` : svc.manifest.id,
-					command: svc.manifest.command === PLACEHOLDER
-						? command
-						: (svc.manifest.command || command),
-					description: svc.manifest.description === PLACEHOLDER
-						? undefined
-						: svc.manifest.description,
-				};
+			if (svc?.manifest) {
+				const SENTINELS = new Set(["__runtime__", "__auto__"]);
+				const id = !svc.manifest.id || SENTINELS.has(svc.manifest.id) ? command : svc.manifest.id;
+				const cmd = !svc.manifest.command || SENTINELS.has(svc.manifest.command)
+					? command
+					: svc.manifest.command;
+				const desc = svc.manifest.description && !SENTINELS.has(svc.manifest.description)
+					? svc.manifest.description
+					: undefined;
+				return { id, command: cmd, description: desc };
 			}
 		} catch (_err) {
-			// Fallback below
+			// ignore & fallback below
 		}
-		return { id: `mock_${command}`, command };
+		return { id: command, command };
 	}
 
 	for (const svc of template.services) {
@@ -227,13 +225,9 @@ export async function buildSnapshot(
 		sourceSig: await sha256Hex(built.map((b) => b.bundleHash).sort().join("|")),
 		configHash,
 	};
-	const integrity = await sha256Hex(
-		JSON.stringify({ ...baseSnapshot, integrity: undefined }),
-	);
+	const integrity = await sha256Hex(JSON.stringify({ ...baseSnapshot, integrity: undefined }));
 	const snapshot: RoutingSnapshot = { ...baseSnapshot, integrity };
-	// 4. Persist by config hash
 	saveSnapshotByConfigHash(configHash, snapshot);
-	// 5. Memory cache (replace any prior snapshot for chatId)
 	snapshotCache.set(chatId, { snapshot, expires: now + SNAPSHOT_TTL_MS });
 	log.debug("snapshot.build", {
 		chatId,
@@ -241,10 +235,8 @@ export async function buildSnapshot(
 		listeners: snapshot.listeners.length,
 		configId,
 	});
-	return snapshot; // final return
+	return snapshot;
 }
-
-// (Flow & survey examples now external in example_services folder)
 
 // Garbage collect orphan service bundles not referenced by any snapshot.
 export function gcOrphanBundles(): { deleted: string[]; kept: string[] } {

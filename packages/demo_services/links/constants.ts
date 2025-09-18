@@ -1,4 +1,4 @@
-export const LINKS_SERVICE_ID = "mock_links" as const;
+export const LINKS_SERVICE_ID = "links" as const;
 export const LINKS_VERSION = "1.0.0" as const;
 export const LINKS_COMMAND = "links" as const;
 

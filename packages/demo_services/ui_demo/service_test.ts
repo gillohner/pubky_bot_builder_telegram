@@ -29,6 +29,7 @@ Deno.test("UI Demo Service - Keyboard Demo Callback", function () {
 		type: "callback",
 		data: "demo_keyboard",
 		...mockContext,
+		routeMeta: { id: "ui_demo", command: "ui" },
 	};
 
 	const response = service.handlers.callback(event) as ServiceResponse;
@@ -45,6 +46,7 @@ Deno.test("UI Demo Service - Carousel Demo Callback", function () {
 		data: "demo_carousel",
 		...mockContext,
 		state: {},
+		routeMeta: { id: "ui_demo", command: "ui" },
 	};
 
 	const response = service.handlers.callback(event) as ServiceResponse;
@@ -61,6 +63,7 @@ Deno.test("UI Demo Service - Carousel Navigation Next", function () {
 		data: "carousel_next",
 		...mockContext,
 		state: { carouselIndex: 0 },
+		routeMeta: { id: "ui_demo", command: "ui" },
 	};
 
 	const response = service.handlers.callback(event) as ServiceResponse;
@@ -82,6 +85,7 @@ Deno.test("UI Demo Service - Carousel Navigation Previous", function () {
 		data: "carousel_prev",
 		...mockContext,
 		state: { carouselIndex: 1 },
+		routeMeta: { id: "ui_demo", command: "ui" },
 	};
 
 	const response = service.handlers.callback(event) as ServiceResponse;

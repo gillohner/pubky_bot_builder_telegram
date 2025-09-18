@@ -33,10 +33,11 @@ for (const rel of servicePaths) {
 		assert(/\d+\.\d+\.\d+/.test(m.version), "version not semver-like");
 		assert(["single_command", "command_flow", "listener"].includes(m.kind), "kind invalid");
 		assertEquals(m.schemaVersion, 1, "schemaVersion mismatch");
+		// command may still be an auto placeholder at define-time; allow __auto__/__runtime__ here
 		if (m.kind !== "listener") {
 			assert(
 				typeof m.command === "string" && m.command.length > 0,
-				"command required for non-listener kinds",
+				"command placeholder missing",
 			);
 		}
 	});

@@ -1,4 +1,4 @@
-export const SURVEY_SERVICE_ID = "mock_survey" as const;
+export const SURVEY_SERVICE_ID = "survey" as const;
 export const SURVEY_VERSION = "1.0.0" as const;
 export const SURVEY_COMMAND = "survey" as const;
 

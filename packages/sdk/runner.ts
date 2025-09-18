@@ -56,21 +56,23 @@ export async function runService(svc: DefinedService) {
 	// Derive runtime route metadata (host-provided) for automatic manifest alignment
 	const routeMeta = payload.ctx?.routeMeta;
 	if (routeMeta) {
-		// Only override if service opted-in via placeholder tokens to avoid mutating real manifests.
-		const placeholder = "__runtime__";
+		// Recognize either legacy "__runtime__" placeholder or new "__auto__" sentinel.
+		const placeholders = new Set(["__runtime__", "__auto__"]);
 		try {
-			if (svc.manifest.id === placeholder) {
-				// manifest object itself is mutable even if parent service was frozen.
+			if (placeholders.has(svc.manifest.id)) {
 				(svc.manifest as { id: string }).id = routeMeta.id;
 			}
-			if (svc.manifest.command === placeholder) {
+			if (placeholders.has(svc.manifest.command)) {
 				(svc.manifest as { command: string }).command = routeMeta.command;
 			}
-			if (svc.manifest.description === placeholder && routeMeta.description) {
+			if (
+				(svc.manifest.description === undefined || placeholders.has(svc.manifest.description)) &&
+				routeMeta.description
+			) {
 				(svc.manifest as { description?: string }).description = routeMeta.description;
 			}
 		} catch (_err) {
-			// Swallow mutation errors; service will fall back to placeholder values.
+			// Ignore mutation issues (frozen objects etc.) – service will still function with placeholders.
 		}
 	}
 

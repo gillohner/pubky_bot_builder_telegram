@@ -12,7 +12,7 @@ Deno.test("links command returns categories keyboard", () => {
 
 Deno.test("links category callback edits message", () => {
 	const res = links.handlers.callback(
-		{ type: "callback", data: "svc:mock_links|c:0", ...ctx } as CallbackEvent,
+		{ type: "callback", data: "svc:links|c:0", ...ctx } as CallbackEvent,
 	) as ServiceResponse;
 	if (res.kind !== "edit") throw new Error("Expected edit");
 });

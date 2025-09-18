@@ -35,14 +35,12 @@ function serializeUIState(state: UIState): Record<string, unknown> {
 	return state as Record<string, unknown>;
 }
 import { UI_DEMO_MESSAGES, UI_DEMO_VERSION } from "./constants.ts";
+import { RouteMeta } from "@schema/routing.ts";
 
 /**
  * Demonstrates cross-platform UI components.
  */
 const service = defineService({
-	id: "__runtime__",
-	command: "__runtime__",
-	description: "__runtime__",
 	version: UI_DEMO_VERSION,
 	kind: "command_flow",
 	handlers: {
@@ -84,7 +82,7 @@ function handleCallback(ev: CallbackEvent) {
 
 	switch (ev.data) {
 		case "demo_keyboard":
-			return showKeyboardDemo(t);
+			return showKeyboardDemo(t, ev.routeMeta as RouteMeta);
 
 		case "demo_menu":
 			return showMenuDemo(t);
@@ -142,9 +140,15 @@ function handleCallback(ev: CallbackEvent) {
 /**
  * Show keyboard demo.
  */
-function showKeyboardDemo(t: (key: string, params?: Record<string, unknown>) => string) {
+function showKeyboardDemo(
+	t: (key: string, params?: Record<string, unknown>) => string,
+	routeMeta: RouteMeta,
+) {
+	// Fallback: if routeMeta missing or lacks id (e.g., unit test invoking handler directly), use current manifest id
+	const effectiveId = routeMeta?.id || service.manifest.id;
 	const keyboard = UIBuilder.keyboard()
-		.callback("🔴 Red", "action_red", "danger")
+		.namespace(effectiveId)
+		.callback("🔴 Red ", "action_red", "danger")
 		.callback("🟢 Green", "action_green", "primary")
 		.row()
 		.callback("🔵 Blue", "action_blue", "secondary")
@@ -253,6 +257,7 @@ function showCarouselDemo(
 	currentCard.actions = [...(currentCard.actions || []), ...navigationActions];
 
 	const carousel = UIBuilder.carousel()
+		.namespace(service.manifest.id)
 		.card(currentCard)
 		.build();
 

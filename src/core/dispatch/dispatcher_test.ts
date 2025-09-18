@@ -64,7 +64,7 @@ Deno.test(
 		}
 		const cb = await dispatch({
 			kind: "callback",
-			data: "svc:mock_links|c:0",
+			data: "svc:links|c:0",
 			ctx: { chatId: "chat-links", userId: "user" },
 		});
 		if (
@@ -88,7 +88,7 @@ Deno.test("survey flow can accept telegram photo instead of URL", async () => {
 	}
 	await dispatch({
 		kind: "callback",
-		data: "svc:mock_survey|color:Red",
+		data: "svc:survey|color:Red",
 		ctx: { chatId: "chat-survey-photo", userId: "user" },
 	});
 	await dispatch({
@@ -123,7 +123,7 @@ Deno.test("links cancel deletes message", async () => {
 	}
 	const cancel = await dispatch({
 		kind: "callback",
-		data: "svc:mock_links|cancel",
+		data: "svc:links|cancel",
 		ctx: { chatId: "chat-links-cancel", userId: "user" },
 	});
 	if (!cancel.response || cancel.response.kind !== "delete") {
@@ -159,7 +159,7 @@ Deno.test(
 		// Choose color via callback
 		const colorCb = await dispatch({
 			kind: "callback",
-			data: "svc:mock_survey|color:Blue",
+			data: "svc:survey|color:Blue",
 			ctx: { chatId: "chat-survey", userId: "user" },
 		});
 		if (

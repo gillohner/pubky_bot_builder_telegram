@@ -33,7 +33,7 @@ function colorKeyboard(selected?: string) {
 
 	for (const color of SURVEY_COLORS) {
 		const text = selected === color ? `✅ ${color}` : color;
-		keyboard.button({ text, data: `svc:mock_survey|color:${color}` });
+		keyboard.button({ text, data: `svc:survey|color:${color}` });
 		keyboard.row();
 	}
 
