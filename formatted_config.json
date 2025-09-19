@@ -1,0 +1,51 @@
+{
+	"configId": "test",
+	"services": [
+		{
+			"name": "Hello",
+			"command": "hello",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/hello/service.ts",
+			"version": "1.0.0"
+		},
+		{
+			"name": "Links",
+			"command": "links",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/links/service.ts"
+		},
+		{
+			"name": "Survey",
+			"command": "survey",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/survey/service.ts"
+		},
+		{
+			"name": "Security Probe",
+			"command": "secprobe",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/security_probe/service.ts",
+			"config": {
+				"admin_only": true
+			}
+		},
+		{
+			"name": "Media Demo",
+			"command": "media",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/media_demo/service.ts"
+		},
+		{
+			"name": "UI Demo",
+			"command": "ui",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/ui_demo/service.ts",
+			"config": {
+				"datasets": {
+					"carousel": "pubky://demo/pub/pubky-bot-builder/datasets/0000000000100",
+					"broken": "pubky://demo/pub/pubky-bot-builder/datasets/0000000000999"
+				}
+			}
+		}
+	]
+}

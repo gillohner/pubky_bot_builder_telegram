@@ -3,6 +3,118 @@
 Lightweight experimental framework for composing Telegram bot services (commands, flows, listeners)
 executed inside a constrained sandbox with a routing snapshot and a simple in-memory state layer.
 
+## Pubky Structure
+
+1. Bot Chat Config
+
+```json
+{
+	"id": "0000000000000",
+	"description": "Default Bot Config",
+	"version": "1.0.0",
+	"created_at": 1731171234,
+	"services": [
+		{
+			"src": "pubky://{pub}/pub/pubky-bot-builder/service-configs/0000000000001.json",
+			"overrides": { "time_window_days": 30 },
+			"expose": true,
+			"admin_only": false
+		}
+	],
+	"listeners": [
+		{
+			"service_config_ref": "pubky://{pub}/pub/pubky-bot-builder/service-configs/0000000000003.json"
+		}
+	],
+	"periodic": [
+		{
+			"service_config_ref": "pubky://{pub}/pub/pubky-bot-builder/service-configs/0000000000004.json"
+		}
+	]
+}
+```
+
+2. Service Config
+
+```json
+{
+	"id": "0000000000001",
+	"name": "Meetups Flow",
+	"kind": "command_flow",
+	"created_at": 1731171200,
+	"source": {
+		"type": "jsr",
+		"package": "@gillohner/meetups_flow",
+		"version": "1.0.0"
+	},
+	"capabilities": {
+		"allowNetwork": true,
+		"networkAllowlist": ["meetstr.com"],
+		"timeoutMs": 20000
+	},
+	"config": {
+		"command": "/meetups",
+		"description": "Browse and filter meetups",
+		"datasets": {
+			"cal": "pubky://{pub}/pub/pubky-bot-builder/datasets/0000000000002.json"
+		},
+		"timezone": "Europe/Zurich"
+	}
+}
+```
+
+Alternative (Git fallback, pinned commit only):
+
+```json
+{
+	"id": "0000000000001",
+	"name": "Meetups Flow",
+	"kind": "command_flow",
+	"created_at": 1731171200,
+	"source": {
+		"type": "git",
+		"repo": "https://github.com/example/meetups-flow.git",
+		"commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+		"entry": "src/index.ts"
+	},
+	"capabilities": {
+		/* ... */
+	},
+	"default_config": {
+		/* ... */
+	}
+}
+```
+
+3. Dataset (links with categories)
+
+```json
+{
+	"id": "0000000000002",
+	"name": "Community Links",
+	"created_at": 1731171100,
+	"kind": "dataset",
+	"schema": "links@1",
+	"data": {
+		"categories": [
+			{
+				"name": "General",
+				"links": [
+					{ "title": "Pubky", "url": "https://pubky.org" },
+					{ "title": "Docs", "url": "https://docs.pubky.org" }
+				]
+			},
+			{
+				"name": "Community",
+				"links": [
+					{ "title": "Dezentralschweiz", "url": "https://dezentralschweiz.ch" }
+				]
+			}
+		]
+	}
+}
+```
+
 ## Monorepo Structure (Current)
 
 ```

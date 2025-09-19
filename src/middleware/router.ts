@@ -6,8 +6,9 @@ import { applyServiceResponse } from "@middleware/response.ts";
 import { isBotCommand, normalizeCommand } from "@core/util/utils.ts";
 import { log } from "@core/util/logger.ts";
 import { fetchPubkyConfig } from "@core/pubky/pubky.ts";
-import { setChatConfig } from "@core/config/store.ts";
+import { getChatConfig, setChatConfig } from "@core/config/store.ts";
 import { userIsAdmin } from "@middleware/admin.ts";
+import { CONFIG } from "@core/config.ts";
 
 // Non-admin commands exposed to users (dynamic services appended later via snapshot)
 const CORE_PUBLIC_COMMANDS: string[] = ["start"]; // plus service commands resolved dynamically
@@ -32,18 +33,31 @@ async function publishCommands(ctx: Context, chatId: string) {
 		// Map to Telegram BotCommand objects (simple same-name description for now)
 		const toTelegram = (list: string[]) => list.map((c) => ({ command: c, description: c }));
 
-		// 1) Public scope (all chat members)
-		if (publicCommands.length > 0) {
-			await ctx.api.setMyCommands(toTelegram(publicCommands), {
-				scope: { type: "chat", chat_id: Number(chatId) },
-			});
-		}
+		// Check if this is a private chat (Telegram chat types: "private", "group", "supergroup", "channel")
+		const isPrivateChat = ctx.chat?.type === "private";
 
-		// 2) Admin scope (chat administrators). Telegram will show this superset only to admins.
-		if (adminCommands.length > 0) {
-			await ctx.api.setMyCommands(toTelegram(adminCommands), {
-				scope: { type: "chat_administrators", chat_id: Number(chatId) },
-			});
+		if (isPrivateChat) {
+			// Private chat: set admin commands by default (user is implicitly the admin)
+			if (adminCommands.length > 0) {
+				await ctx.api.setMyCommands(toTelegram(adminCommands), {
+					scope: { type: "chat", chat_id: Number(chatId) },
+				});
+			}
+		} else {
+			// Group/supergroup: use dual scope approach
+			// 1) Public scope (all chat members)
+			if (publicCommands.length > 0) {
+				await ctx.api.setMyCommands(toTelegram(publicCommands), {
+					scope: { type: "chat", chat_id: Number(chatId) },
+				});
+			}
+
+			// 2) Admin scope (chat administrators). Telegram will show this superset only to admins.
+			if (adminCommands.length > 0) {
+				await ctx.api.setMyCommands(toTelegram(adminCommands), {
+					scope: { type: "chat_administrators", chat_id: Number(chatId) },
+				});
+			}
 		}
 	} catch (err) {
 		log.warn("commands.publish.error", { error: (err as Error).message });
@@ -99,8 +113,8 @@ export function buildMiddleware() {
 				}
 				const templateId = normalizeCommand(parts[1]!);
 				try {
-					const cfg = fetchPubkyConfig(templateId);
-					setChatConfig(chatId, cfg.configId, cfg);
+					const cfg = await fetchPubkyConfig(templateId);
+					setChatConfig(chatId, templateId, cfg);
 					// Snapshot invalidation: chat-level snapshots removed; config hash change triggers rebuild automatically.
 					await publishCommands(ctx, chatId); // update lists if dynamic commands changed
 					await ctx.reply(`Config set to '${cfg.configId}'. Admin/public command lists refreshed.`);
@@ -114,11 +128,28 @@ export function buildMiddleware() {
 					await ctx.reply("Admin only.");
 					return;
 				}
-				// Force rebuild snapshot using current config
+				// Re-fetch current config and force rebuild snapshot
 				try {
+					let configId = CONFIG.defaultTemplateId;
+					const existingConfig = getChatConfig(chatId);
+					if (existingConfig) configId = existingConfig.config_id;
+
+					log.debug("updateconfig.start", { chatId, configId });
+
+					// Re-fetch the config (this will pick up any changes from Pubky)
+					const cfg = await fetchPubkyConfig(configId);
+					setChatConfig(chatId, configId, cfg);
+
+					log.debug("updateconfig.config_updated", {
+						chatId,
+						originalConfigId: configId,
+						fetchedConfigId: cfg.configId,
+					});
+
+					// Force rebuild snapshot with the updated config
 					await buildSnapshot(chatId, { force: true });
 					await publishCommands(ctx, chatId);
-					await ctx.reply("Snapshot updated; commands refreshed.");
+					await ctx.reply("Config re-fetched and snapshot updated; commands refreshed.");
 				} catch (err) {
 					await ctx.reply(`Update failed: ${(err as Error).message}`);
 				}

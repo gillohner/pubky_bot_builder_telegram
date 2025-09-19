@@ -52,12 +52,29 @@ export async function buildSnapshot(
 	// For now config hash is hash of configId only (later: hash full template JSON)
 	const configHash = await sha256Hex(configId);
 
+	log.debug("snapshot.build.start", {
+		chatId,
+		configId,
+		configHash,
+		force: opts?.force || false,
+	});
+
 	// 1. In-memory cache (unless force) - also verify cached snapshot matches current configHash
 	if (!opts?.force) {
 		const cached = snapshotCache.get(chatId);
 		if (cached && cached.expires > now && cached.snapshot.configHash === configHash) {
+			log.debug("snapshot.cache.hit", { chatId, configHash });
 			return cached.snapshot;
+		} else if (cached) {
+			log.debug("snapshot.cache.miss", {
+				chatId,
+				cachedHash: cached.snapshot.configHash,
+				currentHash: configHash,
+				expired: cached.expires <= now,
+			});
 		}
+	} else {
+		log.debug("snapshot.cache.force_skip", { chatId, configHash });
 	}
 
 	// 2. Persistent snapshot keyed by current config hash (unless force)
@@ -95,13 +112,16 @@ export async function buildSnapshot(
 	// 3. Build from config template (or fallback default template)
 	let template;
 	try {
-		template = fetchPubkyConfig(configId);
+		template = await fetchPubkyConfig(configId);
 	} catch (_err) {
 		// fallback to default
-		template = fetchPubkyConfig("default");
+		template = await fetchPubkyConfig("default");
 	}
 
-	const serviceFiles = [...template.services, ...template.listeners].map((s) => s.entry);
+	const serviceFiles = [
+		...(template.services || []),
+		...(template.listeners || []),
+	].map((s) => s.entry);
 	// Build or reuse bundles (content-addressed). Store each if new.
 	const built = await Promise.all(serviceFiles.map((p) =>
 		bundleAndHash(
@@ -178,7 +198,7 @@ export async function buildSnapshot(
 		return { id: command, command };
 	}
 
-	for (const svc of template.services) {
+	for (const svc of template.services || []) {
 		const bundle = built[idx++];
 		const meta = await loadMeta(svc.entry, svc.command);
 		// Local file-based datasets (developer convenience)
@@ -205,7 +225,7 @@ export async function buildSnapshot(
 		};
 	}
 	const listenerRoutes: ListenerRoute[] = [];
-	for (const l of template.listeners) {
+	for (const l of template.listeners || []) {
 		const bundle = built[idx++];
 		const meta = await loadMeta(l.entry, l.command);
 		listenerRoutes.push({

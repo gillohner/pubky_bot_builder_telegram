@@ -137,13 +137,26 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 	},
 };
 
-export function fetchPubkyConfig(urlOrId: string): PubkyBotConfigTemplate {
+export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTemplate> {
 	// Accept either explicit template id ("default") or a fake pubky:// URL whose basename matches an id.
-	let key = urlOrId.trim();
+	const key = url.trim();
 	if (key.startsWith("pubky://")) {
-		const last = key.split("/").pop();
-		if (last) key = last.replace(/\.json$/i, "");
+		const { Client } = await import("@synonymdev/pubky");
+		const client = new Client();
+		console.log("Fetching Pubky config from", key);
+		const response = await client.fetch(key);
+		if (!response.ok) {
+			throw new Error(
+				`Failed to fetch Pubky config from ${key}: ${response.status} ${response.statusText}`,
+			);
+		}
+		const json = await response.json();
+		console.log("Fetched Pubky config from", json);
+		console.log("Fetched Pubky config from", json as PubkyBotConfigTemplate);
+		return json as PubkyBotConfigTemplate;
 	}
+
+	// Local templates
 	if (!TEMPLATES[key]) throw new Error(`Unknown Pubky config template: ${key}`);
 	return structuredClone(TEMPLATES[key]);
 }
