@@ -1,5 +1,7 @@
 # Pubky Telegram Bot Builder (Deno)
 
+VERY EARLY DEVELOPMENT! Below is already inaccurate!
+
 Lightweight experimental framework for composing Telegram bot services (commands, flows, listeners)
 executed inside a constrained sandbox with a routing snapshot and a simple in-memory state layer.
 
