@@ -206,11 +206,23 @@ export async function buildSnapshot(
 		// Pubky referenced datasets from service config (mapping name -> pubky:// URL)
 		const configDatasetsRaw = (svc.config?.datasets as Record<string, unknown> | undefined) || {};
 		for (const [k, v] of Object.entries(configDatasetsRaw)) {
-			if (typeof v === "string" && v.startsWith("pubky://")) {
-				// Normalize: remove trailing .json if present
-				const norm = v.replace(/\.json$/i, "");
-				// Store placeholder; resolution layer (future) will fetch & cache. For now mark unresolved.
-				datasetsLocal[k] = { __pubkyRef: norm };
+			if (typeof v === "string") {
+				if (v.startsWith("pubky://")) {
+					// Normalize: remove trailing .json if present
+					const norm = v.replace(/\.json$/i, "");
+					// Store placeholder for unresolved pubky references (legacy path)
+					datasetsLocal[k] = { __pubkyRef: norm };
+				} else {
+					// Plain string values allowed (e.g., http URL), pass through
+					datasetsLocal[k] = v;
+				}
+			} else if (v !== null && typeof v === "object") {
+				// Already resolved JSON blob from modular Pubky resolver
+				datasetsLocal[k] = v as Record<string, unknown>;
+			} else {
+				// Primitive (number/boolean/null) – keep as-is
+				// deno-lint-ignore no-explicit-any
+				datasetsLocal[k] = v as any;
 			}
 		}
 		const datasets = Object.keys(datasetsLocal).length ? datasetsLocal : undefined;

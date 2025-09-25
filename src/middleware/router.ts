@@ -111,7 +111,8 @@ export function buildMiddleware() {
 					await ctx.reply("Usage: /setconfig <templateId>");
 					return;
 				}
-				const templateId = normalizeCommand(parts[1]!);
+				const rawArg = parts[1]!;
+				const templateId = rawArg.startsWith("pubky://") ? rawArg : normalizeCommand(rawArg);
 				try {
 					const cfg = await fetchPubkyConfig(templateId);
 					setChatConfig(chatId, templateId, cfg);

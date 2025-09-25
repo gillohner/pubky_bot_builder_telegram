@@ -1,6 +1,6 @@
 // src/adapters/telegram/adapter.ts
 // Telegram platform adapter implementing PlatformAdapter interface.
-import type { Context } from "grammy";
+import { type Context, InputFile } from "grammy";
 import type { ServiceResponse } from "@sdk/mod.ts";
 import { log } from "@core/util/logger.ts";
 import type { AdapterApplyContext, PlatformAdapter } from "@adapters/types.ts";
@@ -137,12 +137,37 @@ async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edi
 	}
 }
 
+async function resolvePhotoInput(photo: string): Promise<string | InputFile> {
+	if (typeof photo === "string" && photo.startsWith("pubky://")) {
+		try {
+			const { Client } = await import("@synonymdev/pubky");
+			const client = new Client();
+			const resp = await client.fetch(photo);
+			if (!resp.ok) throw new Error(`pubky fetch failed: ${resp.status} ${resp.statusText}`);
+			const ab = await resp.arrayBuffer();
+			const bytes = new Uint8Array(ab);
+			// Best-effort filename
+			const name = photo.split("/").pop() || "image.bin";
+			return new InputFile(new Blob([bytes]), name);
+		} catch (e) {
+			log.warn("pubky.photo.fetch.failed", { error: (e as Error).message });
+			// Fallback: return original (will likely fail on Telegram)
+			return photo;
+		}
+	}
+	return photo;
+}
+
 async function handlePhoto(ctx: Context, r: Extract<ServiceResponse, { kind: "photo" }>) {
 	try {
-		const msg = await ctx.replyWithPhoto(r.photo, {
-			caption: r.caption,
-			...(r.options as Record<string, unknown> | undefined),
-		});
+		const input = await resolvePhotoInput(r.photo);
+		const msg = await ctx.replyWithPhoto(
+			input as unknown as Parameters<typeof ctx.replyWithPhoto>[0],
+			{
+				caption: r.caption,
+				...(r.options as Record<string, unknown> | undefined),
+			},
+		);
 		return msg.message_id;
 	} catch (err) {
 		log.error("photo.send.failed", { error: err });

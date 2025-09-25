@@ -24,7 +24,7 @@ Deno.test("Media Demo Service - Complete Media Flow", function () {
 		assertEquals(initialResponse.text, "Welcome to Media Demo! Choose a media type:");
 		const kb = initialResponse.ui as import("@sdk/mod.ts").UIKeyboard;
 		// Ensure we have expected number of rows (each button on its own row)
-		assertEquals(kb.buttons.length, 5);
+		assertEquals(kb.buttons.length, 6);
 	}
 
 	// Step 2: Test audio callback with full service prefix

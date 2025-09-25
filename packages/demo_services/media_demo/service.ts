@@ -5,15 +5,17 @@ import {
 	createI18n,
 	defineService,
 	document,
+	edit,
 	location,
 	none,
+	photo,
 	reply,
 	runService,
 	UIBuilder,
 	uiKeyboard,
 	video,
 } from "@sdk/mod.ts";
-import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
+import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import { MEDIA_DEMO_MESSAGES, MEDIA_DEMO_VERSION } from "./constants.ts";
 
 /**
@@ -26,7 +28,7 @@ const service = defineService({
 	handlers: {
 		command: handleCommand,
 		callback: handleCallback,
-		message: () => none(),
+		message: handleMessage,
 	},
 });
 
@@ -50,6 +52,8 @@ function handleCommand(ev: CommandEvent) {
 		.callback("📍 Location", "location")
 		.row()
 		.callback("👤 Contact", "contact")
+		.row()
+		.callback("🖼️ Gallery", "gallery")
 		.inline(false)
 		.build();
 
@@ -114,9 +118,193 @@ function handleCallback(ev: CallbackEvent) {
 				options: { caption: t("contact", { name: "John Doe" }) },
 				deleteTrigger: true,
 			});
+		case "gallery":
+			return showGallery(ev);
 		default:
+			// Check if it's a gallery navigation callback
+			if (ev.data.startsWith("gallery:")) {
+				return handleGalleryNavigation(ev);
+			}
 			return reply(t("unknownType"));
 	}
+}
+
+/**
+ * Handle message events (for URL input during gallery flow)
+ */
+function handleMessage(ev: MessageEvent) {
+	// If we're in gallery flow and user sends a URL, try to display it
+	if (ev.state && ev.state.flow === "gallery") {
+		const message = ev.message as { text?: string };
+		const text = message?.text?.trim();
+
+		if (
+			text &&
+			(text.startsWith("http://") || text.startsWith("https://") || text.startsWith("pubky://"))
+		) {
+			return handleUrlInput(ev, text);
+		}
+
+		return reply(
+			"Please send a valid URL (http://, https://, or pubky://) or use the gallery buttons.",
+		);
+	}
+
+	return none();
+}
+
+/**
+ * Show gallery with pubky:// data injection
+ */
+function showGallery(ev: CallbackEvent) {
+	// Access the gallery dataset injected from service config
+	const gallery = ev.datasets?.gallery as {
+		images?: Array<{ url: string; caption?: string; title?: string }>;
+	};
+
+	if (!gallery?.images || gallery.images.length === 0) {
+		return edit(
+			"Gallery dataset not found or empty. Please configure the gallery dataset in your service config.",
+			{
+				deleteTrigger: true,
+			},
+		);
+	}
+
+	// Start with the first image
+	const currentIndex = 0;
+	const image = gallery.images[currentIndex];
+
+	// Build navigation keyboard
+	const navKeyboard = UIBuilder.keyboard()
+		.namespace(service.manifest.id);
+
+	if (gallery.images.length > 1) {
+		navKeyboard
+			.callback("⬅️ Previous", `gallery:prev:${currentIndex}`)
+			.callback("➡️ Next", `gallery:next:${currentIndex}`)
+			.row();
+	}
+
+	navKeyboard
+		.callback("🔗 Custom URL", "gallery:custom")
+		.callback("🔙 Back to Menu", "back")
+		.inline(false);
+
+	const keyboard = navKeyboard.build();
+
+	// Determine the media URL (handle pubky:// URLs)
+	const caption = `${image.title || "Gallery Image"}\\n${image.caption || ""}\\n\\n📍 ${
+		currentIndex + 1
+	} of ${gallery.images.length}`;
+
+	return photo(image.url, {
+		caption,
+		options: {
+			reply_markup: keyboard,
+		},
+		deleteTrigger: true,
+		state: {
+			op: "replace",
+			value: { flow: "gallery", currentIndex },
+		},
+	});
+}
+
+/**
+ * Handle gallery navigation
+ */
+function handleGalleryNavigation(ev: CallbackEvent) {
+	const [, action, indexStr] = ev.data.split(":");
+	const currentIndex = parseInt(indexStr || "0", 10);
+
+	const gallery = ev.datasets?.gallery as {
+		images?: Array<{ url: string; caption?: string; title?: string }>;
+	};
+
+	if (!gallery?.images || gallery.images.length === 0) {
+		return edit("Gallery not available.", { deleteTrigger: true });
+	}
+
+	let newIndex = currentIndex;
+
+	switch (action) {
+		case "prev":
+			newIndex = currentIndex > 0 ? currentIndex - 1 : gallery.images.length - 1;
+			break;
+		case "next":
+			newIndex = currentIndex < gallery.images.length - 1 ? currentIndex + 1 : 0;
+			break;
+		case "custom":
+			return edit("Send me a URL (http://, https://, or pubky://) to display:", {
+				state: {
+					op: "merge",
+					value: { waitingForUrl: true },
+				},
+				deleteTrigger: true,
+			});
+		default:
+			return none();
+	}
+
+	const image = gallery.images[newIndex];
+	// Build navigation keyboard
+	const navKeyboard = UIBuilder.keyboard()
+		.namespace(service.manifest.id);
+
+	if (gallery.images.length > 1) {
+		navKeyboard
+			.callback("⬅️ Previous", `gallery:prev:${newIndex}`)
+			.callback("➡️ Next", `gallery:next:${newIndex}`)
+			.row();
+	}
+
+	navKeyboard
+		.callback("🔗 Custom URL", "gallery:custom")
+		.callback("🔙 Back to Menu", "back")
+		.inline(false);
+
+	const keyboard = navKeyboard.build();
+
+	const caption = `${image.title || "Gallery Image"}\n${image.caption || ""}\n\n📍 ${
+		newIndex + 1
+	} of ${gallery.images.length}`;
+
+	return photo(image.url, {
+		caption,
+		options: {
+			reply_markup: keyboard,
+		},
+		deleteTrigger: true,
+		state: {
+			op: "replace",
+			value: { flow: "gallery", currentIndex: newIndex },
+		},
+	});
+}
+
+/**
+ * Handle URL input from user
+ */
+function handleUrlInput(_ev: MessageEvent, url: string) {
+	const backKeyboard = UIBuilder.keyboard()
+		.namespace(service.manifest.id)
+		.callback("🔙 Back to Gallery", "gallery")
+		.callback("🏠 Main Menu", "back")
+		.inline(false)
+		.build();
+
+	return photo(url, {
+		caption: `Custom image from: ${url}`,
+		options: {
+			reply_markup: backKeyboard,
+		},
+		deleteTrigger: true,
+		state: {
+			op: "replace",
+			value: { flow: "gallery" },
+		},
+	});
 }
 
 if (import.meta.main) await runService(service);

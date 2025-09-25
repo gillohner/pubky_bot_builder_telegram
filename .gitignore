@@ -3,5 +3,5 @@
 .vscode/*
 .DS_Store
 bot.sqlite
-Readme.md
 docs/
+README.md
