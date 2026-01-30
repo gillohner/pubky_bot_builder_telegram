@@ -209,6 +209,18 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 };
 
 /**
+ * Convert a pubky:// URL to Address format for publicStorage
+ * The SDK accepts both 'pubky<pk>/pub/...' and 'pubky://<pk>/pub/...' formats
+ */
+function pubkyUrlToAddress(url: string): `pubky://${string}/pub/${string}` {
+	if (!url.startsWith("pubky://")) {
+		throw new Error(`Invalid pubky URL: ${url}`);
+	}
+	// pubky:// URLs are valid Address type as-is
+	return url as `pubky://${string}/pub/${string}`;
+}
+
+/**
  * Fetch and resolve a complete bot configuration from Pubky.
  * Supports both legacy single-file configs and new modular configs.
  */
@@ -216,18 +228,13 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 	const key = url.trim();
 
 	if (key.startsWith("pubky://")) {
-		const { Client } = await import("@synonymdev/pubky");
-		const client = new Client();
+		const { Pubky } = await import("@synonymdev/pubky");
+		const pubky = new Pubky();
+		const publicStorage = pubky.publicStorage;
 		console.log("Fetching Pubky config from", key);
 
-		const response = await client.fetch(key);
-		if (!response.ok) {
-			throw new Error(
-				`Failed to fetch Pubky config from ${key}: ${response.status} ${response.statusText}`,
-			);
-		}
-
-		const json = await response.json();
+		const address = pubkyUrlToAddress(key);
+		const json = await publicStorage.getJson(address);
 		console.log("Fetched Pubky config:", json);
 
 		// Check if this is a new modular bot config
@@ -243,13 +250,25 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 				// Create a wrapper to match our PubkyClient interface
 				const clientWrapper: PubkyClient = {
 					async fetch(url: string) {
-						const resp = await client.fetch(url);
-						return {
-							ok: resp.ok,
-							status: resp.status,
-							statusText: resp.statusText,
-							json: () => resp.json(),
-						};
+						try {
+							const addr = pubkyUrlToAddress(url);
+							const data = await publicStorage.getJson(addr);
+							return {
+								ok: true,
+								status: 200,
+								statusText: "OK",
+								json: () => Promise.resolve(data),
+							};
+						} catch (e) {
+							const err = e as { data?: { statusCode?: number } };
+							const statusCode = err.data?.statusCode ?? 500;
+							return {
+								ok: false,
+								status: statusCode,
+								statusText: (e as Error).message,
+								json: () => Promise.reject(e),
+							};
+						}
 					},
 				};
 				return await resolveModularBotConfig(json as PubkyBotConfig, clientWrapper);

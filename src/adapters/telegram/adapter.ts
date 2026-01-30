@@ -140,15 +140,14 @@ async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edi
 async function resolvePhotoInput(photo: string): Promise<string | InputFile> {
 	if (typeof photo === "string" && photo.startsWith("pubky://")) {
 		try {
-			const { Client } = await import("@synonymdev/pubky");
-			const client = new Client();
-			const resp = await client.fetch(photo);
-			if (!resp.ok) throw new Error(`pubky fetch failed: ${resp.status} ${resp.statusText}`);
-			const ab = await resp.arrayBuffer();
-			const bytes = new Uint8Array(ab);
+			const { Pubky } = await import("@synonymdev/pubky");
+			const pubky = new Pubky();
+			// pubky:// URLs are valid Address type for publicStorage
+			type Address = `pubky://${string}/pub/${string}`;
+			const bytes = await pubky.publicStorage.getBytes(photo as Address);
 			// Best-effort filename
 			const name = photo.split("/").pop() || "image.bin";
-			return new InputFile(new Blob([bytes]), name);
+			return new InputFile(new Blob([bytes as BlobPart]), name);
 		} catch (e) {
 			log.warn("pubky.photo.fetch.failed", { error: (e as Error).message });
 			// Fallback: return original (will likely fail on Telegram)
