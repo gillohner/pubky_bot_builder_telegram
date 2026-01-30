@@ -1,4 +1,5 @@
-.env*
+.env.local
+.env
 .github/instructions/*
 .vscode/*
 .DS_Store
