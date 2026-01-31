@@ -201,8 +201,8 @@ export function buildMiddleware() {
 				const originalText = ctx.callbackQuery?.message?.text ?? "";
 				await ctx.editMessageText(
 					originalText +
-						`\n\n✅ **Approved** by ${adminName}` +
-						(result.success ? " - Written successfully" : " - ⚠️ Write failed"),
+					`\n\n✅ **Approved** by ${adminName}` +
+					(result.success ? " - Written successfully" : " - ⚠️ Write failed"),
 					{ parse_mode: "Markdown" },
 				);
 			} catch {
