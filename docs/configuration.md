@@ -1,6 +1,7 @@
 # Configuration Guide
 
-This guide covers how to configure the Pubky Bot Builder, including environment variables, bot configuration templates, and service settings.
+This guide covers how to configure the Pubky Bot Builder, including environment variables, bot
+configuration templates, and service settings.
 
 ## Environment Variables
 
@@ -12,44 +13,45 @@ cp .env.example .env.local
 
 ### Required Variables
 
-| Variable | Description |
-|----------|-------------|
+| Variable    | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
 | `BOT_TOKEN` | Telegram bot token from [@BotFather](https://t.me/BotFather) |
 
 ### Optional Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NODE_ENV` | `development` | Environment mode (`development` or `production`) |
-| `DEBUG` | `0` | Enable debug logging (`1` to enable) |
-| `LOG_MIN_LEVEL` | `info` | Minimum log level: `debug`, `info`, `warn`, `error` |
-| `LOG_PRETTY` | `0` | Pretty-print JSON logs (`1` to enable) |
-| `DEFAULT_TEMPLATE_ID` | `default` | Default configuration template ID |
-| `WEBHOOK` | `0` | Use webhook mode instead of polling (`1` to enable) |
-| `ENABLE_DELETE_PINNED` | `0` | Allow deleting pinned messages (`1` to enable) |
-| `DEFAULT_MESSAGE_TTL` | `0` | Auto-delete bot messages after N seconds (0 = disabled) |
+| Variable               | Default       | Description                                             |
+| ---------------------- | ------------- | ------------------------------------------------------- |
+| `NODE_ENV`             | `development` | Environment mode (`development` or `production`)        |
+| `DEBUG`                | `0`           | Enable debug logging (`1` to enable)                    |
+| `LOG_MIN_LEVEL`        | `info`        | Minimum log level: `debug`, `info`, `warn`, `error`     |
+| `LOG_PRETTY`           | `0`           | Pretty-print JSON logs (`1` to enable)                  |
+| `DEFAULT_TEMPLATE_ID`  | `default`     | Default configuration template ID                       |
+| `WEBHOOK`              | `0`           | Use webhook mode instead of polling (`1` to enable)     |
+| `ENABLE_DELETE_PINNED` | `0`           | Allow deleting pinned messages (`1` to enable)          |
+| `DEFAULT_MESSAGE_TTL`  | `0`           | Auto-delete bot messages after N seconds (0 = disabled) |
 
 ## Bot Configuration Templates
 
-Configuration templates define which services are available to the bot. The bot ships with a `default` template, but you can create custom configurations.
+Configuration templates define which services are available to the bot. The bot ships with a
+`default` template, but you can create custom configurations.
 
 ### Template Structure
 
 ```json
 {
-    "configId": "my_custom_config",
-    "services": [
-        {
-            "name": "Service Name",
-            "command": "commandname",
-            "kind": "single_command",
-            "entry": "./path/to/service.ts",
-            "version": "1.0.0",
-            "config": {},
-            "datasets": {}
-        }
-    ],
-    "listeners": []
+	"configId": "my_custom_config",
+	"services": [
+		{
+			"name": "Service Name",
+			"command": "commandname",
+			"kind": "single_command",
+			"entry": "./path/to/service.ts",
+			"version": "1.0.0",
+			"config": {},
+			"datasets": {}
+		}
+	],
+	"listeners": []
 }
 ```
 
@@ -57,23 +59,23 @@ Configuration templates define which services are available to the bot. The bot 
 
 #### Top-Level Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `configId` | Yes | Unique identifier for this configuration |
-| `services` | Yes | Array of command/flow services |
-| `listeners` | No | Array of listener services |
+| Field       | Required | Description                              |
+| ----------- | -------- | ---------------------------------------- |
+| `configId`  | Yes      | Unique identifier for this configuration |
+| `services`  | Yes      | Array of command/flow services           |
+| `listeners` | No       | Array of listener services               |
 
 #### Service Definition Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Human-readable service name |
-| `command` | Yes | Command trigger (without `/`) |
-| `kind` | Yes | Service type: `single_command`, `command_flow`, or `listener` |
-| `entry` | Yes | Path to service TypeScript file |
-| `version` | No | Service version string |
-| `config` | No | Custom configuration object passed to service |
-| `datasets` | No | Named dataset mappings (name → URL) |
+| Field      | Required | Description                                                   |
+| ---------- | -------- | ------------------------------------------------------------- |
+| `name`     | Yes      | Human-readable service name                                   |
+| `command`  | Yes      | Command trigger (without `/`)                                 |
+| `kind`     | Yes      | Service type: `single_command`, `command_flow`, or `listener` |
+| `entry`    | Yes      | Path to service TypeScript file                               |
+| `version`  | No       | Service version string                                        |
+| `config`   | No       | Custom configuration object passed to service                 |
+| `datasets` | No       | Named dataset mappings (name → URL)                           |
 
 ### Example Configurations
 
@@ -81,15 +83,15 @@ Configuration templates define which services are available to the bot. The bot 
 
 ```json
 {
-    "configId": "minimal",
-    "services": [
-        {
-            "name": "Hello",
-            "command": "hello",
-            "kind": "single_command",
-            "entry": "./packages/demo_services/hello/service.ts"
-        }
-    ]
+	"configId": "minimal",
+	"services": [
+		{
+			"name": "Hello",
+			"command": "hello",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/hello/service.ts"
+		}
+	]
 }
 ```
 
@@ -97,51 +99,51 @@ Configuration templates define which services are available to the bot. The bot 
 
 ```json
 {
-    "configId": "full_featured",
-    "services": [
-        {
-            "name": "Greeting Bot",
-            "command": "hello",
-            "kind": "single_command",
-            "entry": "./packages/demo_services/hello/service.ts",
-            "version": "1.0.0",
-            "config": {
-                "greeting": "Welcome to our bot!"
-            }
-        },
-        {
-            "name": "User Survey",
-            "command": "survey",
-            "kind": "command_flow",
-            "entry": "./packages/demo_services/survey/service.ts",
-            "version": "2.0.0"
-        },
-        {
-            "name": "Resource Links",
-            "command": "links",
-            "kind": "single_command",
-            "entry": "./packages/demo_services/links/service.ts"
-        },
-        {
-            "name": "UI Showcase",
-            "command": "ui",
-            "kind": "command_flow",
-            "entry": "./packages/demo_services/ui_demo/service.ts",
-            "config": {
-                "datasets": {
-                    "carousel": "./packages/demo_services/ui_demo/datasets/carousel.json"
-                }
-            }
-        }
-    ],
-    "listeners": [
-        {
-            "name": "Message Logger",
-            "command": "logger",
-            "kind": "listener",
-            "entry": "./my_services/logger/service.ts"
-        }
-    ]
+	"configId": "full_featured",
+	"services": [
+		{
+			"name": "Greeting Bot",
+			"command": "hello",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/hello/service.ts",
+			"version": "1.0.0",
+			"config": {
+				"greeting": "Welcome to our bot!"
+			}
+		},
+		{
+			"name": "User Survey",
+			"command": "survey",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/survey/service.ts",
+			"version": "2.0.0"
+		},
+		{
+			"name": "Resource Links",
+			"command": "links",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/links/service.ts"
+		},
+		{
+			"name": "UI Showcase",
+			"command": "ui",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/ui_demo/service.ts",
+			"config": {
+				"datasets": {
+					"carousel": "./packages/demo_services/ui_demo/datasets/carousel.json"
+				}
+			}
+		}
+	],
+	"listeners": [
+		{
+			"name": "Message Logger",
+			"command": "logger",
+			"kind": "listener",
+			"entry": "./my_services/logger/service.ts"
+		}
+	]
 }
 ```
 
@@ -154,9 +156,9 @@ Configuration is available in the event context:
 ```typescript
 // In your service
 function handleCommand(ev: CommandEvent) {
-    const config = ev.serviceConfig as MyConfigType;
-    const value = config?.myOption ?? "default";
-    // ...
+	const config = ev.serviceConfig as MyConfigType;
+	const value = config?.myOption ?? "default";
+	// ...
 }
 ```
 
@@ -164,24 +166,25 @@ function handleCommand(ev: CommandEvent) {
 
 ```json
 {
-    "name": "Configurable Service",
-    "command": "myservice",
-    "kind": "single_command",
-    "entry": "./services/myservice/service.ts",
-    "config": {
-        "greeting": "Hello!",
-        "maxRetries": 3,
-        "features": {
-            "enableLogging": true,
-            "theme": "dark"
-        }
-    }
+	"name": "Configurable Service",
+	"command": "myservice",
+	"kind": "single_command",
+	"entry": "./services/myservice/service.ts",
+	"config": {
+		"greeting": "Hello!",
+		"maxRetries": 3,
+		"features": {
+			"enableLogging": true,
+			"theme": "dark"
+		}
+	}
 }
 ```
 
 ## Datasets
 
-Datasets allow services to access external data. They're loaded at snapshot build time and passed to services.
+Datasets allow services to access external data. They're loaded at snapshot build time and passed to
+services.
 
 ### Local Datasets
 
@@ -200,8 +203,8 @@ Datasets are auto-discovered and available via `ev.datasets`:
 
 ```typescript
 function handleCommand(ev: CommandEvent) {
-    const items = ev.datasets?.items as ItemData;
-    // ...
+	const items = ev.datasets?.items as ItemData;
+	// ...
 }
 ```
 
@@ -211,15 +214,15 @@ Reference datasets via Pubky URLs:
 
 ```json
 {
-    "name": "My Service",
-    "command": "myservice",
-    "kind": "single_command",
-    "entry": "./services/myservice/service.ts",
-    "config": {
-        "datasets": {
-            "products": "pubky://abc123.../pub/myapp/products.json"
-        }
-    }
+	"name": "My Service",
+	"command": "myservice",
+	"kind": "single_command",
+	"entry": "./services/myservice/service.ts",
+	"config": {
+		"datasets": {
+			"products": "pubky://abc123.../pub/myapp/products.json"
+		}
+	}
 }
 ```
 
@@ -232,6 +235,7 @@ Admins can change the bot configuration for specific chats using:
 ```
 
 The bot will:
+
 1. Validate the config ID exists
 2. Rebuild the routing snapshot
 3. Update available commands
@@ -275,11 +279,11 @@ Standard demo configuration with all example services:
 
 These commands are available to chat administrators:
 
-| Command | Description |
-|---------|-------------|
-| `/start` | Initialize bot and show available commands |
-| `/setconfig <id>` | Change bot configuration template |
-| `/updateconfig` | Force refresh current configuration |
+| Command           | Description                                |
+| ----------------- | ------------------------------------------ |
+| `/start`          | Initialize bot and show available commands |
+| `/setconfig <id>` | Change bot configuration template          |
+| `/updateconfig`   | Force refresh current configuration        |
 
 ## Configuration Sources
 

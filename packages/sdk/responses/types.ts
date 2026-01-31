@@ -73,6 +73,14 @@ export interface UIMessage extends BaseReply {
 	uiType: "keyboard" | "menu" | "card" | "carousel";
 }
 
+export interface PubkyWriteMessage extends BaseReply {
+	kind: "pubky_write";
+	path: string; // Must start with /pub/
+	data: unknown; // JSON-serializable
+	preview: string; // Human-readable preview for admins
+	onApprovalMessage?: string; // Message to send user on approval
+}
+
 export type ServiceResponse =
 	| ReplyMessage
 	| EditMessage
@@ -85,6 +93,7 @@ export type ServiceResponse =
 	| DocumentMessage
 	| LocationMessage
 	| ContactMessage
-	| UIMessage;
+	| UIMessage
+	| PubkyWriteMessage;
 
 export type { StateDirective };

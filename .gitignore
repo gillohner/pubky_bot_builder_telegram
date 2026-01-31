@@ -1,7 +1,7 @@
 .env.local
 .env
-.github/instructions/*
-.vscode/*
 .DS_Store
+.plan
+secrets/
 bot.sqlite
 README.md

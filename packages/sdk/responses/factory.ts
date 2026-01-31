@@ -11,6 +11,7 @@ import type {
 	LocationMessage,
 	NoneMessage,
 	PhotoMessage,
+	PubkyWriteMessage,
 	ReplyMessage,
 	ServiceResponse,
 	UIMessage,
@@ -108,3 +109,22 @@ export const uiCard = (c: UICard, text?: string, opts?: BaseOpts): UIMessage =>
 	ui(c, "card", text, opts);
 export const uiCarousel = (c: UICarousel, text?: string, opts?: BaseOpts): UIMessage =>
 	ui(c, "carousel", text, opts);
+
+export const pubkyWrite = (
+	path: string,
+	data: unknown,
+	opts: BaseOpts & {
+		preview: string;
+		onApprovalMessage?: string;
+	},
+): PubkyWriteMessage =>
+	base(
+		"pubky_write",
+		{
+			path,
+			data,
+			preview: opts.preview,
+			onApprovalMessage: opts.onApprovalMessage,
+		},
+		opts,
+	);

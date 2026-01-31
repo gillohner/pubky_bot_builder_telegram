@@ -7,6 +7,7 @@ import type { AdapterApplyContext, PlatformAdapter } from "@adapters/types.ts";
 import { convertCard, convertCarousel, convertKeyboard, convertMenu } from "./ui_converter.ts";
 import { CONFIG } from "@core/config.ts";
 import { trackMessage } from "@core/ttl/store.ts";
+import { pubkyWriter } from "@core/pubky/writer.ts";
 
 // Narrow helper type for edit options compatibility
 type BasicMessageOptions = Record<string, unknown> | undefined;
@@ -70,11 +71,18 @@ async function cleanupGroup(ctx: Context, cleanupGroup?: string) {
 async function handleReply(ctx: Context, r: Extract<ServiceResponse, { kind: "reply" }>) {
 	await ctx.reply(
 		r.text ?? "", // reply kind expected to carry text; fallback to empty
-		r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
+		{
+			parse_mode: "Markdown",
+			...(r.options as Record<string, unknown> ?? {}),
+		},
 	);
 }
 
 async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edit" }>) {
+	const editOpts = {
+		parse_mode: "Markdown" as const,
+		...(r.options as Record<string, unknown> ?? {}),
+	};
 	try {
 		if (ctx.callbackQuery?.message) {
 			const msg = ctx.callbackQuery.message;
@@ -83,9 +91,7 @@ async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edi
 				ctx.chat!.id,
 				msg.message_id,
 				text,
-				(r.options
-					? { ...(r.options as Record<string, unknown>) }
-					: undefined) as BasicMessageOptions,
+				editOpts as BasicMessageOptions,
 			);
 		} else if (ctx.msg?.message_id) {
 			const text = r.text ?? "";
@@ -93,16 +99,11 @@ async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edi
 				ctx.chat!.id,
 				ctx.msg.message_id,
 				text,
-				(r.options
-					? { ...(r.options as Record<string, unknown>) }
-					: undefined) as BasicMessageOptions,
+				editOpts as BasicMessageOptions,
 			);
 		} else {
 			const text = r.text ?? "";
-			await ctx.reply(
-				text,
-				r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
-			);
+			await ctx.reply(text, editOpts);
 		}
 	} catch (err: unknown) {
 		type WithDescription = { description: string };
@@ -127,10 +128,7 @@ async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edi
 		log.warn("edit.fallback.reply", { error: err });
 		try {
 			const text = r.text ?? "";
-			await ctx.reply(
-				text,
-				r.options ? { ...(r.options as Record<string, unknown>) } : undefined,
-			);
+			await ctx.reply(text, editOpts);
 		} catch (replyErr) {
 			log.error("edit.fallback.failed", { error: replyErr });
 		}
@@ -257,6 +255,42 @@ async function handleContact(ctx: Context, r: Extract<ServiceResponse, { kind: "
 	}
 }
 
+async function handlePubkyWrite(
+	ctx: Context,
+	r: Extract<ServiceResponse, { kind: "pubky_write" }>,
+): Promise<void> {
+	// Queue the write request with PubkyWriter
+	if (!pubkyWriter.isReady()) {
+		await ctx.reply("⚠️ Pubky publishing is not configured for this bot.");
+		return;
+	}
+
+	try {
+		const userId = String(ctx.from?.id ?? "unknown");
+		const chatId = String(ctx.chat?.id ?? "");
+
+		// Get service ID from context (set by dispatcher)
+		const serviceId = (ctx as unknown as { _serviceId?: string })._serviceId ?? "unknown";
+
+		await pubkyWriter.queueWrite({
+			path: r.path,
+			data: r.data,
+			preview: r.preview,
+			serviceId,
+			userId,
+			chatId,
+			onApprovalMessage: r.onApprovalMessage,
+		});
+
+		await ctx.reply(
+			"📝 Your submission has been sent for review. You'll be notified once approved.",
+		);
+	} catch (err) {
+		log.error("pubky.write.queue.failed", { error: (err as Error).message });
+		await ctx.reply("⚠️ Failed to submit. Please try again later.");
+	}
+}
+
 async function handleUI(ctx: Context, r: Extract<ServiceResponse, { kind: "ui" }>) {
 	try {
 		let result: { text: string; reply_markup?: unknown; photo?: string };
@@ -363,6 +397,9 @@ async function applyResponseInternal(ctx: Context, resp: ServiceResponse | null)
 			break;
 		case "ui":
 			sentId = await handleUI(ctx, resp);
+			break;
+		case "pubky_write":
+			await handlePubkyWrite(ctx, resp);
 			break;
 		case "none":
 		default:

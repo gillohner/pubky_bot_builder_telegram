@@ -47,6 +47,11 @@ export function initDb(path = Deno.env.get("LOCAL_DB_URL") || "./bot.sqlite"): v
 	runMigrations(db);
 }
 
+export function getDb(): DB {
+	if (!db) throw new Error("Database not initialized");
+	return db;
+}
+
 function ensureDb(): DB {
 	if (!db) throw new Error("Database not initialized");
 	return db;

@@ -60,6 +60,10 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		// If the import map changes, adjust this mapping & add a test.
 		return importPath.replace("@sdk/", "./packages/sdk/");
 	}
+	if (importPath.startsWith("@eventky/")) {
+		// Map @eventky/ -> ./packages/eventky-specs/
+		return importPath.replace("@eventky/", "./packages/eventky-specs/");
+	}
 	if (importPath.startsWith("./")) {
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));

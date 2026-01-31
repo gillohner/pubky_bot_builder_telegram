@@ -104,28 +104,34 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 	}
 	if (evt.kind === "callback") {
 		const snapshot = await buildSnapshot(evt.ctx.chatId);
-		// Expected format: svc:<serviceId>|<payload>
-		let serviceId: string | undefined;
+		// Expected format: svc:<identifier>|<payload>
+		// The identifier can be either a serviceId or a command name
+		let identifier: string | undefined;
 		let payloadData = evt.data;
 		if (payloadData.startsWith("svc:")) {
 			const pipeIdx = payloadData.indexOf("|");
 			if (pipeIdx > 4) {
-				serviceId = payloadData.slice(4, pipeIdx);
+				identifier = payloadData.slice(4, pipeIdx);
 				payloadData = payloadData.slice(pipeIdx + 1);
 			} else {
-				serviceId = payloadData.slice(4);
+				identifier = payloadData.slice(4);
 				payloadData = "";
 			}
 		}
-		if (!serviceId) {
+		if (!identifier) {
 			log.debug("dispatch.callback.unparsed", { data: evt.data });
 			return { response: null };
 		}
-		const route = Object.values(snapshot.commands).find(
-			(r) => r.serviceId === serviceId,
-		);
+		// First try direct command lookup (most reliable - command is always stable)
+		let route = snapshot.commands[identifier];
+		// Fall back to searching by serviceId (for backward compatibility)
 		if (!route) {
-			log.debug("dispatch.callback.unknown_service", { serviceId });
+			route = Object.values(snapshot.commands).find(
+				(r) => r.serviceId === identifier,
+			) as typeof route;
+		}
+		if (!route) {
+			log.debug("dispatch.callback.unknown_service", { identifier });
 			return { response: null };
 		}
 		const existing = getServiceState({
@@ -157,7 +163,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			},
 		);
 		if (!res.ok) {
-			log.error("sandbox.callback.error", { error: res.error, serviceId });
+			log.error("sandbox.callback.error", { error: res.error, serviceId: route.serviceId });
 			return { response: { kind: "error", text: res.error ?? "sandbox error" } };
 		}
 		if (res.value?.state) {
@@ -178,7 +184,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				version: after?.version,
 			});
 		}
-		log.debug("dispatch.callback.ok", { serviceId, kind: res.value?.kind });
+		log.debug("dispatch.callback.ok", { serviceId: route.serviceId, kind: res.value?.kind });
 		return { response: res.value ?? { kind: "none" } };
 	}
 	if (evt.kind === "message") {

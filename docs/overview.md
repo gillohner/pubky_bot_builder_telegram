@@ -1,6 +1,7 @@
 # Pubky Bot Builder - Architecture Overview
 
-This document provides an overview of the Pubky Bot Builder system architecture, how services work, and how to configure and extend the bot.
+This document provides an overview of the Pubky Bot Builder system architecture, how services work,
+and how to configure and extend the bot.
 
 ## High-Level Architecture
 
@@ -54,12 +55,14 @@ flowchart TB
 ### 1. Bot Entry Point (`src/bot.ts`, `src/main.ts`)
 
 The bot initializes with grammY and connects to Telegram. It supports two modes:
+
 - **Polling mode** (development): `deno task dev`
 - **Webhook mode** (production): `deno task serve`
 
 ### 2. Router Middleware (`src/middleware/router.ts`)
 
 Routes incoming Telegram updates to the appropriate handlers:
+
 - `/start` - Initializes commands for the chat
 - `/setconfig <id>` - Admin command to change bot configuration
 - Service commands - Dispatched to the service sandbox
@@ -67,6 +70,7 @@ Routes incoming Telegram updates to the appropriate handlers:
 ### 3. Dispatcher (`src/core/dispatch/dispatcher.ts`)
 
 The dispatcher is the heart of the system. It:
+
 1. Receives events (commands, callbacks, messages)
 2. Looks up the appropriate service from the routing snapshot
 3. Loads the service bundle
@@ -99,6 +103,7 @@ sequenceDiagram
 ### 4. Sandbox Host (`src/core/sandbox/host.ts`)
 
 Services run in isolated Deno subprocesses with no permissions by default:
+
 - No network access
 - No file system access
 - No remote module imports
@@ -109,6 +114,7 @@ This ensures services cannot access sensitive data or cause harm.
 ### 5. Snapshot System (`src/core/snapshot/snapshot.ts`)
 
 Snapshots are cached routing tables that map commands to service bundles:
+
 - Built from configuration templates
 - Cached in-memory with TTL
 - Persisted to SQLite by config hash
@@ -118,11 +124,11 @@ Snapshots are cached routing tables that map commands to service bundles:
 
 Services are defined using the SDK and come in three types:
 
-| Kind | Description | Use Case |
-|------|-------------|----------|
-| `single_command` | Stateless, responds once | Simple utilities, links, greetings |
-| `command_flow` | Stateful, multi-step interaction | Surveys, wizards, forms |
-| `listener` | Responds to any message | Auto-responders, bots that react to content |
+| Kind             | Description                      | Use Case                                    |
+| ---------------- | -------------------------------- | ------------------------------------------- |
+| `single_command` | Stateless, responds once         | Simple utilities, links, greetings          |
+| `command_flow`   | Stateful, multi-step interaction | Surveys, wizards, forms                     |
+| `listener`       | Responds to any message          | Auto-responders, bots that react to content |
 
 ### Service Lifecycle
 
@@ -163,6 +169,7 @@ type MessageEvent = { type: "message"; message: unknown } & ServiceContext;
 ### Service Context
 
 Every event includes:
+
 - `chatId` - Telegram chat identifier
 - `userId` - Telegram user identifier
 - `language` - User's language code
@@ -175,23 +182,23 @@ Every event includes:
 
 Services return one of these response types:
 
-| Response | Purpose |
-|----------|---------|
-| `reply(text)` | Send a new message |
-| `edit(text)` | Edit the triggering message |
-| `photo(url)` | Send a photo |
-| `audio(url)` | Send audio |
-| `video(url)` | Send video |
-| `document(url)` | Send a document |
-| `location(lat, lng)` | Send a location |
-| `contact(phone, name)` | Send a contact |
-| `del()` | Delete the triggering message |
-| `none()` | No response |
-| `error(text)` | Error response |
-| `uiKeyboard(kb)` | UI keyboard response |
-| `uiMenu(menu)` | UI menu response |
-| `uiCard(card)` | UI card response |
-| `uiCarousel(items)` | UI carousel response |
+| Response               | Purpose                       |
+| ---------------------- | ----------------------------- |
+| `reply(text)`          | Send a new message            |
+| `edit(text)`           | Edit the triggering message   |
+| `photo(url)`           | Send a photo                  |
+| `audio(url)`           | Send audio                    |
+| `video(url)`           | Send video                    |
+| `document(url)`        | Send a document               |
+| `location(lat, lng)`   | Send a location               |
+| `contact(phone, name)` | Send a contact                |
+| `del()`                | Delete the triggering message |
+| `none()`               | No response                   |
+| `error(text)`          | Error response                |
+| `uiKeyboard(kb)`       | UI keyboard response          |
+| `uiMenu(menu)`         | UI menu response              |
+| `uiCard(card)`         | UI card response              |
+| `uiCarousel(items)`    | UI carousel response          |
 
 ### State Management
 
@@ -201,13 +208,13 @@ For `command_flow` services, state persists between interactions:
 import { state } from "@sdk/mod.ts";
 
 // Replace entire state
-state.replace({ step: 1, data: "value" })
+state.replace({ step: 1, data: "value" });
 
 // Merge with existing state
-state.merge({ step: 2 })
+state.merge({ step: 2 });
 
 // Clear state (ends flow)
-state.clear()
+state.clear();
 ```
 
 ### UI Builder
@@ -219,25 +226,25 @@ import { UIBuilder } from "@sdk/mod.ts";
 
 // Keyboard with callback buttons
 const keyboard = UIBuilder.keyboard()
-    .namespace("my_service")  // Auto-prefix callbacks
-    .callback("Option 1", "opt1")
-    .row()
-    .callback("Option 2", "opt2")
-    .build();
+	.namespace("my_service") // Auto-prefix callbacks
+	.callback("Option 1", "opt1")
+	.row()
+	.callback("Option 2", "opt2")
+	.build();
 
 // Menu grid
 const menu = UIBuilder.menu("Select an option")
-    .callback("A", "a")
-    .callback("B", "b")
-    .columns(2)
-    .build();
+	.callback("A", "a")
+	.callback("B", "b")
+	.columns(2)
+	.build();
 
 // Card with image and actions
 const card = UIBuilder.card("Title")
-    .description("Description text")
-    .image("https://example.com/image.jpg")
-    .callback("Action", "action_data")
-    .build();
+	.description("Description text")
+	.image("https://example.com/image.jpg")
+	.callback("Action", "action_data")
+	.build();
 ```
 
 ## Creating a Service
@@ -246,22 +253,22 @@ const card = UIBuilder.card("Title")
 
 ```typescript
 // my_service/service.ts
-import { defineService, reply, none, runService } from "@sdk/mod.ts";
+import { defineService, none, reply, runService } from "@sdk/mod.ts";
 import type { CommandEvent } from "@sdk/mod.ts";
 
 const service = defineService({
-    id: "my_service",
-    version: "1.0.0",
-    kind: "single_command",
-    command: "mycommand",
-    description: "Does something useful",
-    handlers: {
-        command: (ev: CommandEvent) => {
-            return reply("Hello from my service!");
-        },
-        callback: () => none(),
-        message: () => none(),
-    },
+	id: "my_service",
+	version: "1.0.0",
+	kind: "single_command",
+	command: "mycommand",
+	description: "Does something useful",
+	handlers: {
+		command: (ev: CommandEvent) => {
+			return reply("Hello from my service!");
+		},
+		callback: () => none(),
+		message: () => none(),
+	},
 });
 
 export default service;
@@ -272,37 +279,37 @@ if (import.meta.main) await runService(service);
 
 ```typescript
 // wizard/service.ts
-import { defineService, reply, none, state, runService } from "@sdk/mod.ts";
-import type { CommandEvent, CallbackEvent, MessageEvent } from "@sdk/mod.ts";
+import { defineService, none, reply, runService, state } from "@sdk/mod.ts";
+import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
 
 interface WizardState {
-    step: number;
-    name?: string;
+	step: number;
+	name?: string;
 }
 
 const service = defineService({
-    id: "wizard",
-    version: "1.0.0",
-    kind: "command_flow",
-    command: "wizard",
-    handlers: {
-        command: (ev: CommandEvent) => {
-            return reply("What is your name?", {
-                state: state.replace({ step: 1 })
-            });
-        },
-        message: (ev: MessageEvent) => {
-            const st = ev.state as WizardState;
-            if (st?.step === 1) {
-                const name = (ev.message as { text?: string })?.text;
-                return reply(`Nice to meet you, ${name}!`, {
-                    state: state.clear()  // End the flow
-                });
-            }
-            return none();
-        },
-        callback: () => none(),
-    },
+	id: "wizard",
+	version: "1.0.0",
+	kind: "command_flow",
+	command: "wizard",
+	handlers: {
+		command: (ev: CommandEvent) => {
+			return reply("What is your name?", {
+				state: state.replace({ step: 1 }),
+			});
+		},
+		message: (ev: MessageEvent) => {
+			const st = ev.state as WizardState;
+			if (st?.step === 1) {
+				const name = (ev.message as { text?: string })?.text;
+				return reply(`Nice to meet you, ${name}!`, {
+					state: state.clear(), // End the flow
+				});
+			}
+			return none();
+		},
+		callback: () => none(),
+	},
 });
 
 export default service;
@@ -317,40 +324,40 @@ Configuration defines which services are available:
 
 ```json
 {
-    "configId": "my_config",
-    "services": [
-        {
-            "name": "Hello",
-            "command": "hello",
-            "kind": "single_command",
-            "entry": "./packages/demo_services/hello/service.ts",
-            "version": "1.0.0"
-        },
-        {
-            "name": "Survey",
-            "command": "survey", 
-            "kind": "command_flow",
-            "entry": "./packages/demo_services/survey/service.ts",
-            "config": {
-                "custom_option": true
-            }
-        }
-    ],
-    "listeners": []
+	"configId": "my_config",
+	"services": [
+		{
+			"name": "Hello",
+			"command": "hello",
+			"kind": "single_command",
+			"entry": "./packages/demo_services/hello/service.ts",
+			"version": "1.0.0"
+		},
+		{
+			"name": "Survey",
+			"command": "survey",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/survey/service.ts",
+			"config": {
+				"custom_option": true
+			}
+		}
+	],
+	"listeners": []
 }
 ```
 
 ### Service Configuration Options
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Display name |
-| `command` | Yes | Command trigger (without `/`) |
-| `kind` | Yes | `single_command`, `command_flow`, or `listener` |
-| `entry` | Yes | Path to service file |
-| `version` | No | Service version |
-| `config` | No | Custom config passed to service |
-| `datasets` | No | Named dataset mappings |
+| Field      | Required | Description                                     |
+| ---------- | -------- | ----------------------------------------------- |
+| `name`     | Yes      | Display name                                    |
+| `command`  | Yes      | Command trigger (without `/`)                   |
+| `kind`     | Yes      | `single_command`, `command_flow`, or `listener` |
+| `entry`    | Yes      | Path to service file                            |
+| `version`  | No       | Service version                                 |
+| `config`   | No       | Custom config passed to service                 |
+| `datasets` | No       | Named dataset mappings                          |
 
 ### Datasets
 
@@ -358,14 +365,14 @@ Services can access external data through datasets:
 
 ```json
 {
-    "name": "UI Demo",
-    "command": "ui",
-    "entry": "./packages/demo_services/ui_demo/service.ts",
-    "config": {
-        "datasets": {
-            "carousel": "pubky://user/pub/app/datasets/carousel.json"
-        }
-    }
+	"name": "UI Demo",
+	"command": "ui",
+	"entry": "./packages/demo_services/ui_demo/service.ts",
+	"config": {
+		"datasets": {
+			"carousel": "pubky://user/pub/app/datasets/carousel.json"
+		}
+	}
 }
 ```
 
@@ -373,16 +380,16 @@ In the service, access via `ev.datasets.carousel`.
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BOT_TOKEN` | *required* | Telegram bot token |
-| `NODE_ENV` | `development` | Environment mode |
-| `DEBUG` | `0` | Enable debug mode |
-| `LOG_MIN_LEVEL` | `info` | Logging level (debug/info/warn/error) |
-| `LOG_PRETTY` | `0` | Pretty-print logs |
-| `DEFAULT_TEMPLATE_ID` | `default` | Default config template |
-| `WEBHOOK` | `0` | Enable webhook mode |
-| `DEFAULT_MESSAGE_TTL` | `0` | Auto-delete messages after N seconds |
+| Variable              | Default       | Description                           |
+| --------------------- | ------------- | ------------------------------------- |
+| `BOT_TOKEN`           | _required_    | Telegram bot token                    |
+| `NODE_ENV`            | `development` | Environment mode                      |
+| `DEBUG`               | `0`           | Enable debug mode                     |
+| `LOG_MIN_LEVEL`       | `info`        | Logging level (debug/info/warn/error) |
+| `LOG_PRETTY`          | `0`           | Pretty-print logs                     |
+| `DEFAULT_TEMPLATE_ID` | `default`     | Default config template               |
+| `WEBHOOK`             | `0`           | Enable webhook mode                   |
+| `DEFAULT_MESSAGE_TTL` | `0`           | Auto-delete messages after N seconds  |
 
 ## Pubky Integration
 
@@ -432,6 +439,7 @@ flowchart TB
 ```
 
 Services run in complete isolation:
+
 - No network access (`--no-remote`)
 - No environment variables
 - No file system access

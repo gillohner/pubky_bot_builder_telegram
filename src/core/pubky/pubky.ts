@@ -124,6 +124,17 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 					},
 				},
 			},
+			{
+				name: "Event Creator",
+				command: "newevent",
+				kind: "command_flow",
+				entry: "./packages/demo_services/event_creator/service.ts",
+				config: {
+					// calendarUri: "pubky://your-pk/pub/eventky.app/calendars/your-calendar-id",
+					defaultTimezone: "UTC",
+					requireLocation: false,
+				},
+			},
 		],
 		listeners: [
 			{
@@ -445,8 +456,9 @@ function determineServiceEntry(registryEntry: PubkyServiceRegistryEntry): string
 			return `jsr:${registryEntry.source.location}@${registryEntry.source.version || "latest"}`;
 		case "github":
 			// For GitHub, we'll need to resolve this at runtime
-			return `github:${registryEntry.source.location}${registryEntry.source.entry ? "#" + registryEntry.source.entry : ""
-				}`;
+			return `github:${registryEntry.source.location}${
+				registryEntry.source.entry ? "#" + registryEntry.source.entry : ""
+			}`;
 		default:
 			throw new Error(`Unsupported service source type: ${registryEntry.source.type}`);
 	}

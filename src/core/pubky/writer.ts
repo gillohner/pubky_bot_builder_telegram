@@ -1,0 +1,398 @@
+// src/core/pubky/writer.ts
+// PubkyWriter: handles writing data to Pubky homeservers with admin approval flow.
+
+import { log } from "@core/util/logger.ts";
+import {
+	getExpiredPendingWrites,
+	getPendingWrite,
+	type PendingWrite,
+	savePendingWrite,
+	updatePendingWriteStatus,
+} from "./writer_store.ts";
+
+// Session type from Pubky SDK
+type PubkySession = Awaited<
+	ReturnType<ReturnType<InstanceType<typeof import("@synonymdev/pubky").Pubky>["signer"]>["signin"]>
+>;
+
+export interface PubkyWriterConfig {
+	recoveryFilePath?: string;
+	passphrase?: string;
+	adminGroup?: string;
+	approvalTimeout?: number; // seconds, default 86400 (24h)
+}
+
+export interface QueueWriteParams {
+	path: string;
+	data: unknown;
+	preview: string;
+	serviceId: string;
+	userId: string;
+	chatId: string;
+	onApprovalMessage?: string;
+}
+
+// Telegram bot API interface (injected to avoid circular deps)
+export interface BotApi {
+	sendMessage(
+		chatId: string | number,
+		text: string,
+		options?: {
+			parse_mode?: string;
+			reply_markup?: unknown;
+		},
+	): Promise<{ message_id: number }>;
+	editMessageText(
+		chatId: string | number,
+		messageId: number,
+		text: string,
+		options?: { parse_mode?: string },
+	): Promise<unknown>;
+}
+
+class PubkyWriter {
+	private pubky: InstanceType<typeof import("@synonymdev/pubky").Pubky> | null = null;
+	private session: PubkySession | null = null;
+	private config: PubkyWriterConfig = {};
+	private botApi: BotApi | null = null;
+	private initialized = false;
+	private publicKey: string | null = null;
+
+	/**
+	 * Initialize the writer with configuration.
+	 * Call this once at startup after database is ready.
+	 */
+	async initialize(config?: PubkyWriterConfig, botApi?: BotApi): Promise<boolean> {
+		this.config = {
+			recoveryFilePath: config?.recoveryFilePath ?? Deno.env.get("PUBKY_RECOVERY_FILE"),
+			passphrase: config?.passphrase ?? Deno.env.get("PUBKY_PASSPHRASE"),
+			adminGroup: config?.adminGroup ?? Deno.env.get("PUBKY_ADMIN_GROUP"),
+			approvalTimeout: config?.approvalTimeout ??
+				Number(Deno.env.get("PUBKY_APPROVAL_TIMEOUT") || 86400),
+		};
+
+		if (botApi) {
+			this.botApi = botApi;
+		}
+
+		// Check if we have credentials
+		if (!this.config.recoveryFilePath || !this.config.passphrase) {
+			log.info("pubky.writer.disabled", { reason: "missing credentials" });
+			return false;
+		}
+
+		try {
+			const { Pubky, Keypair } = await import("@synonymdev/pubky");
+
+			this.pubky = new Pubky();
+
+			// Load keypair from recovery file
+			const recoveryData = await Deno.readFile(this.config.recoveryFilePath);
+			const keypair = Keypair.fromRecoveryFile(recoveryData, this.config.passphrase);
+
+			this.publicKey = keypair.publicKey.toString();
+
+			const signer = this.pubky.signer(keypair);
+
+			// Sign in to homeserver (keypair must already be registered via Pubky Ring/CLI)
+			this.session = await signer.signin();
+
+			this.initialized = true;
+			log.info("pubky.writer.initialized", { publicKey: this.publicKey });
+			return true;
+		} catch (err) {
+			log.error("pubky.writer.init_failed", {
+				error: (err as Error).message,
+				hint: "Ensure keypair is registered with a homeserver using Pubky Ring or CLI",
+			});
+			return false;
+		}
+	}
+
+	/**
+	 * Check if writer is ready for use
+	 */
+	isReady(): boolean {
+		return this.initialized && this.session !== null;
+	}
+
+	/**
+	 * Get the public key of the configured identity
+	 */
+	getPublicKey(): string | null {
+		return this.publicKey;
+	}
+
+	/**
+	 * Set the bot API for sending messages (can be called after initialize)
+	 */
+	setBotApi(api: BotApi): void {
+		this.botApi = api;
+	}
+
+	/**
+	 * Queue a write request for admin approval.
+	 * Returns the write ID for tracking.
+	 */
+	async queueWrite(params: QueueWriteParams): Promise<string> {
+		const id = crypto.randomUUID();
+		const timeout = this.config.approvalTimeout ?? 86400;
+
+		const pending: PendingWrite = {
+			id,
+			path: params.path,
+			data: params.data,
+			preview: params.preview,
+			serviceId: params.serviceId,
+			userId: params.userId,
+			chatId: params.chatId,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + timeout * 1000,
+			status: "pending",
+			onApproval: params.onApprovalMessage
+				? { chatId: params.chatId, message: params.onApprovalMessage }
+				: undefined,
+		};
+
+		// Store in database
+		savePendingWrite(pending);
+
+		// Forward to admin group for approval
+		const adminMessageId = await this.forwardToAdminGroup(pending);
+		if (adminMessageId) {
+			updatePendingWriteStatus(id, "pending", { adminMessageId });
+		}
+
+		log.info("pubky.write.queued", {
+			id,
+			serviceId: params.serviceId,
+			userId: params.userId,
+			path: params.path,
+		});
+
+		return id;
+	}
+
+	/**
+	 * Execute an approved write to Pubky.
+	 */
+	async executeWrite(id: string): Promise<boolean> {
+		if (!this.session) {
+			log.error("pubky.write.not_initialized", { id });
+			return false;
+		}
+
+		const pending = getPendingWrite(id);
+		if (!pending) {
+			log.warn("pubky.write.not_found", { id });
+			return false;
+		}
+
+		if (pending.status !== "approved") {
+			log.warn("pubky.write.not_approved", { id, status: pending.status });
+			return false;
+		}
+
+		try {
+			// Write to Pubky (path must be under /pub/)
+			type PubPath = `/pub/${string}`;
+			const pubPath = pending.path as PubPath;
+
+			log.debug("pubky.write.attempting", {
+				id,
+				path: pubPath,
+				dataKeys: Object.keys(pending.data as object),
+				publicKey: this.publicKey,
+			});
+
+			await this.session.storage.putJson(pubPath, pending.data);
+
+			// Verify the write by reading it back
+			try {
+				const readBack = await this.session.storage.getJson(pubPath);
+				log.debug("pubky.write.verified", {
+					id,
+					path: pubPath,
+					readBackExists: !!readBack,
+					readBackKeys: readBack ? Object.keys(readBack as object) : [],
+				});
+			} catch (verifyErr) {
+				log.warn("pubky.write.verify_failed", {
+					id,
+					path: pubPath,
+					error: (verifyErr as Error).message,
+				});
+			}
+
+			updatePendingWriteStatus(id, "written");
+
+			log.info("pubky.write.success", { id, path: pending.path });
+
+			// Notify user if service requested it (via onApprovalMessage)
+			if (pending.onApproval && this.botApi) {
+				try {
+					await this.botApi.sendMessage(pending.onApproval.chatId, pending.onApproval.message);
+				} catch (notifyErr) {
+					log.warn("pubky.write.notify_failed", { error: (notifyErr as Error).message });
+				}
+			}
+
+			return true;
+		} catch (err) {
+			updatePendingWriteStatus(id, "failed", { error: (err as Error).message });
+			log.error("pubky.write.failed", { id, error: (err as Error).message });
+			return false;
+		}
+	}
+
+	/**
+	 * Upload binary data (e.g., images) to Pubky.
+	 * This is a direct write without approval flow - use for system uploads.
+	 * Path must start with /pub/
+	 */
+	async uploadBytes(path: string, data: Uint8Array): Promise<string | null> {
+		if (!this.session || !this.publicKey) {
+			log.error("pubky.upload.not_initialized", {});
+			return null;
+		}
+
+		try {
+			type PubPath = `/pub/${string}`;
+			await this.session.storage.putBytes(path as PubPath, data);
+			const fullUri = `pubky://${this.publicKey}${path}`;
+			log.info("pubky.upload.success", { path, size: data.length });
+			return fullUri;
+		} catch (err) {
+			log.error("pubky.upload.failed", { path, error: (err as Error).message });
+			return null;
+		}
+	}
+
+	/**
+	 * Handle approval from admin.
+	 */
+	async approve(
+		writeId: string,
+		approvedBy: string,
+	): Promise<{ success: boolean; message: string }> {
+		const pending = getPendingWrite(writeId);
+		if (!pending) {
+			return { success: false, message: "Write request not found" };
+		}
+
+		if (pending.status !== "pending") {
+			return { success: false, message: `Already ${pending.status}` };
+		}
+
+		updatePendingWriteStatus(writeId, "approved", {
+			approvedBy,
+			approvedAt: Date.now(),
+		});
+
+		const writeSuccess = await this.executeWrite(writeId);
+		return {
+			success: writeSuccess,
+			message: writeSuccess ? "Approved & written!" : "Approved but write failed",
+		};
+	}
+
+	/**
+	 * Handle rejection from admin.
+	 */
+	reject(
+		writeId: string,
+		rejectedBy: string,
+	): { success: boolean; message: string } {
+		const pending = getPendingWrite(writeId);
+		if (!pending) {
+			return { success: false, message: "Write request not found" };
+		}
+
+		if (pending.status !== "pending") {
+			return { success: false, message: `Already ${pending.status}` };
+		}
+
+		updatePendingWriteStatus(writeId, "rejected", {
+			approvedBy: rejectedBy,
+			approvedAt: Date.now(),
+		});
+
+		// TODO: Support onRejectionMessage in pubkyWrite() if services want rejection callbacks
+
+		return { success: true, message: "Rejected" };
+	}
+
+	/**
+	 * Clean up expired pending writes.
+	 */
+	async cleanupExpired(): Promise<number> {
+		const expired = getExpiredPendingWrites();
+
+		for (const write of expired) {
+			updatePendingWriteStatus(write.id, "expired");
+
+			// Try to edit admin message if accessible
+			if (write.adminMessageId && this.config.adminGroup && this.botApi) {
+				try {
+					await this.botApi.editMessageText(
+						this.config.adminGroup,
+						write.adminMessageId,
+						write.preview + "\n\n⏰ **Expired**",
+						{ parse_mode: "Markdown" },
+					);
+				} catch {
+					// ignore edit failures (message may be too old)
+				}
+			}
+		}
+
+		if (expired.length > 0) {
+			log.info("pubky.write.cleanup", { expired: expired.length });
+		}
+
+		return expired.length;
+	}
+
+	/**
+	 * Forward a pending write to the admin group for approval.
+	 */
+	private async forwardToAdminGroup(pending: PendingWrite): Promise<number | undefined> {
+		if (!this.config.adminGroup || !this.botApi) {
+			log.debug("pubky.write.no_admin_group", { id: pending.id });
+			return undefined;
+		}
+
+		const expiresDate = new Date(pending.expiresAt).toISOString();
+		const message = `📝 **New Pubky Write Request**
+
+**From:** User ${pending.userId}
+**Service:** ${pending.serviceId}
+**Path:** \`${pending.path}\`
+
+**Preview:**
+${pending.preview}
+
+**Expires:** ${expiresDate}`.trim();
+
+		try {
+			const result = await this.botApi.sendMessage(this.config.adminGroup, message, {
+				parse_mode: "Markdown",
+				reply_markup: {
+					inline_keyboard: [
+						[
+							{ text: "✅ Approve", callback_data: `pubky:approve:${pending.id}` },
+							{ text: "❌ Reject", callback_data: `pubky:reject:${pending.id}` },
+						],
+					],
+				},
+			});
+			return result.message_id;
+		} catch (err) {
+			log.error("pubky.write.forward_failed", { error: (err as Error).message });
+			return undefined;
+		}
+	}
+}
+
+// Singleton instance
+export const pubkyWriter = new PubkyWriter();

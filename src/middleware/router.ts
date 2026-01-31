@@ -9,6 +9,7 @@ import { fetchPubkyConfig } from "@core/pubky/pubky.ts";
 import { getChatConfig, setChatConfig } from "@core/config/store.ts";
 import { userIsAdmin } from "@middleware/admin.ts";
 import { CONFIG } from "@core/config.ts";
+import { pubkyWriter } from "@core/pubky/writer.ts";
 
 // Non-admin commands exposed to users (dynamic services appended later via snapshot)
 const CORE_PUBLIC_COMMANDS: string[] = ["start"]; // plus service commands resolved dynamically
@@ -171,10 +172,65 @@ export function buildMiddleware() {
 	);
 
 	// Callback queries (inline keyboards) forwarder
+	// Handle Pubky approval callbacks (before generic callback handler)
+	composer.callbackQuery(/^pubky:(approve|reject):(.+)$/, async (ctx: Context) => {
+		const match = /^pubky:(approve|reject):(.+)$/.exec(ctx.callbackQuery?.data ?? "");
+		if (!match) {
+			await ctx.answerCallbackQuery({ text: "Invalid callback" });
+			return;
+		}
+
+		const action = match[1];
+		const writeId = match[2];
+
+		// Verify caller is in admin group
+		const adminGroup = Deno.env.get("PUBKY_ADMIN_GROUP");
+		if (adminGroup && String(ctx.chat?.id) !== adminGroup) {
+			await ctx.answerCallbackQuery({ text: "Not authorized" });
+			return;
+		}
+
+		const adminId = String(ctx.from?.id ?? "");
+		const adminName = ctx.from?.first_name ?? "Admin";
+
+		if (action === "approve") {
+			const result = await pubkyWriter.approve(writeId, adminId);
+
+			// Edit the admin message to show approval status
+			try {
+				const originalText = ctx.callbackQuery?.message?.text ?? "";
+				await ctx.editMessageText(
+					originalText +
+						`\n\n✅ **Approved** by ${adminName}` +
+						(result.success ? " - Written successfully" : " - ⚠️ Write failed"),
+					{ parse_mode: "Markdown" },
+				);
+			} catch {
+				// ignore edit failures
+			}
+
+			await ctx.answerCallbackQuery({ text: result.message });
+		} else {
+			const result = await pubkyWriter.reject(writeId, adminId);
+
+			// Edit the admin message to show rejection status
+			try {
+				const originalText = ctx.callbackQuery?.message?.text ?? "";
+				await ctx.editMessageText(originalText + `\n\n❌ **Rejected** by ${adminName}`, {
+					parse_mode: "Markdown",
+				});
+			} catch {
+				// ignore edit failures
+			}
+
+			await ctx.answerCallbackQuery({ text: result.message });
+		}
+	});
+
+	// Generic callback queries (inline keyboards) forwarder
 	composer.on("callback_query:data", async (ctx: Context) => {
 		const chatId = String(ctx.chat?.id ?? "");
 		const data = ctx.callbackQuery?.data ?? "";
-		console.log(`🔔 Received callback: ${data} from chat ${chatId}`);
 		log.debug("callback.received", { chatId, data });
 
 		await buildSnapshot(chatId);
@@ -184,7 +240,6 @@ export function buildMiddleware() {
 			ctx: { chatId, userId: String(ctx.from?.id ?? "") },
 		});
 
-		console.log(`📤 Dispatch result:`, result.response);
 		await applyServiceResponse(ctx, result.response);
 		await ctx.answerCallbackQuery();
 		log.debug("callback.processed", { chatId, data });

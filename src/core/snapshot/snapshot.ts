@@ -177,7 +177,11 @@ export async function buildSnapshot(
 	// Helper to dynamically import a service module and extract manifest (placeholders become runtime-injected values)
 	async function loadMeta(entry: string, command: string): Promise<RouteMeta> {
 		try {
-			const mod = await import(`${entry}?metaBust=${crypto.randomUUID()}`);
+			// Resolve entry path relative to CWD (project root), not relative to this module
+			const absoluteEntry = entry.startsWith("./")
+				? new URL(entry, `file://${Deno.cwd()}/`).href
+				: entry;
+			const mod = await import(`${absoluteEntry}?metaBust=${crypto.randomUUID()}`);
 			const svc = mod.default as {
 				manifest?: { id?: string; command?: string; description?: string };
 			};
@@ -192,8 +196,9 @@ export async function buildSnapshot(
 					: undefined;
 				return { id, command: cmd, description: desc };
 			}
-		} catch (_err) {
-			// ignore & fallback below
+			log.warn("snapshot.loadMeta.no_manifest", { entry, command });
+		} catch (err) {
+			log.warn("snapshot.loadMeta.error", { entry, command, error: (err as Error).message });
 		}
 		return { id: command, command };
 	}

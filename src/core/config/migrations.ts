@@ -56,6 +56,33 @@ export const migrations: Migration[] = [
 			}
 		},
 	},
+	{
+		id: 3,
+		name: "add_pending_writes_table",
+		up: (db: DB) => {
+			db.execute(`CREATE TABLE IF NOT EXISTS pending_writes (
+				id TEXT PRIMARY KEY,
+				path TEXT NOT NULL,
+				data TEXT NOT NULL,
+				preview TEXT NOT NULL,
+				service_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				chat_id TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				expires_at INTEGER NOT NULL,
+				status TEXT NOT NULL DEFAULT 'pending',
+				on_approval TEXT,
+				admin_message_id INTEGER,
+				approved_by TEXT,
+				approved_at INTEGER,
+				error TEXT
+			);`);
+			db.execute(`CREATE INDEX IF NOT EXISTS idx_pending_writes_status ON pending_writes(status);`);
+			db.execute(
+				`CREATE INDEX IF NOT EXISTS idx_pending_writes_expires ON pending_writes(expires_at);`,
+			);
+		},
+	},
 ];
 
 export function runMigrations(db: DB): void {
