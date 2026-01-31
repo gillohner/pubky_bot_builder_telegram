@@ -35,8 +35,8 @@ if (import.meta.main) {
 			return new Response("OK");
 		});
 	} else {
-		console.log("🤖 Starting bot in polling mode...");
+		log.info("bot.starting", { mode: "polling" });
 		await bot.start();
-		console.log("✅ Bot started successfully and is polling for updates");
+		log.info("bot.started", { mode: "polling" });
 	}
 }
