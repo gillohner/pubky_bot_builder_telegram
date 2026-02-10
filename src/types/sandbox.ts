@@ -4,6 +4,8 @@
 export interface SandboxCaps {
 	net?: string[];
 	timeoutMs?: number;
+	/** Whether the service uses npm packages (affects sandbox permissions) */
+	hasNpm?: boolean;
 }
 
 // The sandboxed service runtime (sdk/runtime.ts) expects a payload shape that matches

@@ -26,14 +26,19 @@ flowchart TB
         S1[Hello Service]
         S2[Survey Flow]
         S3[Links Service]
-        S4[Custom Services...]
+        S4[Event Creator]
     end
     
     subgraph Storage["Data Layer"]
         SQLite[(SQLite DB)]
         State[State Store]
         Snapshot[Snapshot Cache]
-        Pubky[Pubky Storage]
+    end
+    
+    subgraph PubkyLayer["Pubky Network"]
+        PW[PubkyWriter]
+        AG[Admin Approval]
+        Pubky[Pubky Homeserver]
     end
     
     TG <-->|Updates/Messages| Grammy
@@ -48,7 +53,73 @@ flowchart TB
     Snapshot --> SQLite
     State --> SQLite
     Snapshot <-.->|Config Fetch| Pubky
+    
+    S4 -.->|pubkyWrite response| Dispatcher
+    Dispatcher -->|Queue Write| PW
+    PW -->|Preview| AG
+    AG -->|Approved| PW
+    PW -->|putJson| Pubky
 ```
+
+## Complete Flow Example: Event Creator Service
+
+The following diagram shows the complete data flow when a user creates an event using the Event Creator service, demonstrating how sandboxed services can safely publish to the decentralized Pubky network:
+
+```mermaid
+flowchart LR
+    subgraph User["👤 User"]
+        U[Telegram User]
+    end
+    
+    subgraph TrustedHost["🔒 Trusted Host"]
+        direction TB
+        Bot[Bot/Router]
+        Disp[Dispatcher]
+        PW[PubkyWriter]
+        DB[(SQLite)]
+    end
+    
+    subgraph Sandbox["🔐 Sandbox<br/>(Zero Permissions)"]
+        EC[Event Creator<br/>Service]
+        SDK[SDK:<br/>state, reply,<br/>pubkyWrite]
+        Eventky[eventky-specs:<br/>createEvent]
+    end
+    
+    subgraph AdminFlow["👮 Admin Approval"]
+        AG[Admin Group]
+        Admin[Human Admin]
+    end
+    
+    subgraph PubkyNetwork["🌐 Pubky Network"]
+        HS[Homeserver]
+    end
+    
+    U -->|1. /newevent| Bot
+    Bot -->|2. Payload via stdin| EC
+    EC --> SDK
+    EC --> Eventky
+    EC -->|3. Response via stdout| Disp
+    Disp <-->|4. State| DB
+    
+    EC -.->|pubkyWrite| Disp
+    Disp -->|5. Queue| PW
+    PW -->|6. Preview| AG
+    Admin -->|7. ✅ Approve| AG
+    AG --> PW
+    PW -->|8. Write| HS
+    PW -->|9. Notify| U
+```
+
+**Flow Steps:**
+1. User sends `/newevent` command
+2. Dispatcher runs Event Creator in isolated sandbox
+3. Service uses SDK to build multi-step flow, collects event data
+4. State persists between steps via SQLite
+5. On confirm, service returns `pubkyWrite()` response with event data
+6. PubkyWriter queues write and forwards preview to admin group
+7. Human admin reviews and approves the event
+8. PubkyWriter executes `session.storage.putJson()` to Pubky homeserver
+9. User receives confirmation message
 
 ## Core Components
 
@@ -111,7 +182,70 @@ Services run in isolated Deno subprocesses with no permissions by default:
 
 This ensures services cannot access sensitive data or cause harm.
 
-### 5. Snapshot System (`src/core/snapshot/snapshot.ts`)
+### 5. PubkyWriter (`src/core/pubky/writer.ts`)
+
+The PubkyWriter enables services to publish data to the Pubky decentralized network with admin approval:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant Bot as Bot/Dispatcher
+    participant S as Sandbox Service
+    participant PW as PubkyWriter
+    participant DB as SQLite
+    participant AG as Admin Group
+    participant Admin as Human Admin
+    participant Pubky as Pubky Homeserver
+    
+    Note over U,Pubky: Example: Event Creator Service Flow
+    
+    U->>Bot: /newevent
+    Bot->>S: Run service (command event)
+    S-->>Bot: reply("What's the title?", state)
+    Bot->>U: "Step 1: What's the title?"
+    
+    loop Multi-step Flow
+        U->>Bot: User input (title, date, time...)
+        Bot->>S: Run service (message event + state)
+        S-->>Bot: reply(prompt, merged state)
+        Bot->>U: Next step prompt
+    end
+    
+    U->>Bot: Clicks "✅ Submit" button
+    Bot->>S: Run service (callback: confirm)
+    S->>S: createEvent() via eventky-specs
+    S-->>Bot: pubkyWrite(path, event, preview)
+    
+    Note over Bot,PW: Trust Boundary - Admin Approval Required
+    
+    Bot->>PW: queueWrite(path, data, preview)
+    PW->>DB: Save pending write
+    PW->>AG: Forward preview for approval
+    AG->>Admin: "New event: [preview] ✅/❌"
+    
+    alt Approved
+        Admin->>AG: Click ✅ Approve
+        AG->>PW: approve(writeId)
+        PW->>Pubky: session.storage.putJson()
+        Pubky-->>PW: Success
+        PW->>DB: Status: written
+        PW->>U: "Your event has been published!"
+    else Rejected
+        Admin->>AG: Click ❌ Reject
+        AG->>PW: reject(writeId)
+        PW->>DB: Status: rejected
+    end
+```
+
+**Key Security Features:**
+- Services cannot directly write to Pubky (sandbox isolation)
+- All writes require human admin approval
+- Preview shown to admins before approval
+- Writes are tracked in SQLite with full audit trail
+- Timeout-based expiration for pending writes
+
+### 6. Snapshot System (`src/core/snapshot/snapshot.ts`)
 
 Snapshots are cached routing tables that map commands to service bundles:
 

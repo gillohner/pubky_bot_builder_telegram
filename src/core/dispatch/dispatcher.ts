@@ -58,6 +58,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			payload as unknown as ExecutePayload,
 			{
 				timeoutMs: 2000,
+				hasNpm: bundle.has_npm === 1,
 			},
 		);
 		if (!res.ok) {
@@ -160,6 +161,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			payload as unknown as ExecutePayload,
 			{
 				timeoutMs: 2000,
+				hasNpm: bundle.has_npm === 1,
 			},
 		);
 		if (!res.ok) {
@@ -222,6 +224,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 					payload as unknown as ExecutePayload,
 					{
 						timeoutMs: 2000,
+						hasNpm: bundle.has_npm === 1,
 					},
 				);
 				if (!res.ok) {
@@ -273,6 +276,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				payload as unknown as ExecutePayload,
 				{
 					timeoutMs: 1000,
+					hasNpm: bundle.has_npm === 1,
 				},
 			);
 			if (!res.ok) {

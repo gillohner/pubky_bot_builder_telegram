@@ -7,8 +7,9 @@ const SERVICE_PATH = "./packages/demo_services/hello/service.ts";
 // SDK runtime path no longer passed explicitly; bundler auto-detects SDK via imports.
 
 Deno.test("bundleService() inlines sdk markers", async () => {
-	const { code, dataUrl } = await bundleService(SERVICE_PATH);
-	assert(dataUrl.startsWith("data:application/typescript;base64,"));
+	const { code, entry, hasNpm } = await bundleService(SERVICE_PATH);
+	assert(entry.startsWith("data:application/typescript;base64,"));
+	assert(!hasNpm, "hello service should not use npm packages");
 	// Heuristic: some known symbol from SDK appears (defineService or runService)
 	assertStringIncludes(code, "defineService");
 });

@@ -15,6 +15,12 @@
 			"entry": "./packages/demo_services/links/service.ts"
 		},
 		{
+			"name": "Link Cleaner",
+			"command": "clean",
+			"kind": "command_flow",
+			"entry": "./packages/demo_services/link_cleaner/service.ts"
+		},
+		{
 			"name": "Survey",
 			"command": "survey",
 			"kind": "command_flow",

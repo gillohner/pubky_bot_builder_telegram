@@ -2,15 +2,36 @@
 // Concatenate the SDK and a service source into one inline module (data URL) for
 // maximum sandbox isolation (no filesystem reads inside sandbox execution).
 // Handles @sdk imports by resolving them through deno.json import map and inlining dependencies.
+// Also handles npm: imports for allowed packages.
 import { log } from "@core/util/logger.ts";
+import { isNpmPackageAllowed } from "@core/util/npm_allowlist.ts";
 
 interface CacheEntry {
 	url: string;
 	code: string;
 	sdkSig: string; // signature of sdk files (mtime aggregate)
 	mtimeSvc: number; // service file mtime
+	hasNpm?: boolean; // whether service uses npm packages
+	tempFilePath?: string; // path to temp file for npm services
 }
 const cache = new Map<string, CacheEntry>();
+
+// Temp file directory for npm service bundles
+let npmBundleDir: string | null = null;
+async function getNpmBundleDir(): Promise<string> {
+	if (!npmBundleDir) {
+		npmBundleDir = await Deno.makeTempDir({ prefix: "service_npm_bundles_" });
+	}
+	return npmBundleDir;
+}
+
+// Simple hash for cache keys
+async function simpleHash(input: string): Promise<string> {
+	const data = new TextEncoder().encode(input);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
 
 // SDK signature cache (avoid walking directory each bundle call)
 let cachedSdkSig = "";
@@ -70,6 +91,16 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		let resolved = `${baseDir}/${importPath.substring(2)}`;
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
+	}
+	if (importPath.startsWith("/")) {
+		// Absolute path - return as is (already resolved)
+		let resolved = importPath;
+		if (!resolved.endsWith(".ts")) resolved += ".ts";
+		return resolved;
+	}
+	if (importPath.startsWith("npm:")) {
+		// npm import - preserve as is, will be stripped later if not inlined
+		return null;
 	}
 	return null; // External import - not handled by bundler
 }
@@ -153,9 +184,118 @@ async function inlineAllImports(
 	return chunks.join("");
 }
 
+// Detect npm imports in code and validate against allowlist
+function detectNpmImports(code: string): { hasNpm: boolean; packages: string[]; disallowed: string[] } {
+	const npmImportRegex = /import\s+(?:type\s+)?(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+\w+|\w+))*\s+from\s+["'](npm:[^"']+)["'];?/g;
+	const packages: string[] = [];
+	const disallowed: string[] = [];
+	let match: RegExpExecArray | null;
+
+	while ((match = npmImportRegex.exec(code))) {
+		const npmSpec = match[1];
+		packages.push(npmSpec);
+		if (!isNpmPackageAllowed(npmSpec)) {
+			disallowed.push(npmSpec);
+		}
+	}
+
+	return {
+		hasNpm: packages.length > 0,
+		packages,
+		disallowed,
+	};
+}
+
+// Bundle service using esbuild-wasm for services with npm dependencies
+// This creates a single-file bundle with all dependencies inlined
+async function bundleWithEsbuild(
+	servicePath: string,
+	projectRoot: string,
+): Promise<string> {
+	// Create a temporary entry file that imports the service
+	const tempDir = await Deno.makeTempDir({ prefix: "service_bundle_" });
+
+	try {
+		// Resolve service path to absolute if relative
+		const absoluteServicePath = servicePath.startsWith("./") || servicePath.startsWith("../")
+			? `${projectRoot}/${servicePath.replace(/^\.\//, "")}`
+			: servicePath;
+
+		// Read the original service
+		const originalCode = await Deno.readTextFile(absoluteServicePath);
+
+		// Get the absolute directory of the service
+		const serviceDir = absoluteServicePath.substring(0, absoluteServicePath.lastIndexOf("/"));
+
+		// Resolve all @sdk/ and @eventky/ imports to absolute paths
+		let processedCode = originalCode
+			.replace(/"@sdk\//g, `"${projectRoot}/packages/sdk/`)
+			.replace(/'@sdk\//g, `'${projectRoot}/packages/sdk/`)
+			.replace(/"@eventky\//g, `"${projectRoot}/packages/eventky-specs/`)
+			.replace(/'@eventky\//g, `'${projectRoot}/packages/eventky-specs/`);
+
+		// Also resolve relative imports from the service directory to absolute paths
+		processedCode = processedCode
+			.replace(/from\s+"\.\/([^"]+)"/g, `from "${serviceDir}/$1"`)
+			.replace(/from\s+'\.\/([^']+)'/g, `from '${serviceDir}/$1'`);
+
+		const tempEntry = `${tempDir}/entry.ts`;
+		await Deno.writeTextFile(tempEntry, processedCode);
+
+		// Create deno.json for the temp directory with npm specifiers
+		const denoConfig = {
+			imports: {
+				"@sdk/": `${projectRoot}/packages/sdk/`,
+				"@eventky/": `${projectRoot}/packages/eventky-specs/`,
+			},
+		};
+		await Deno.writeTextFile(`${tempDir}/deno.json`, JSON.stringify(denoConfig));
+
+		// Use deno emit API or fall back to manual approach
+		// For now, we'll use the deno vendor + concatenation approach
+
+		// Step 1: Vendor the dependencies
+		const vendorCmd = new Deno.Command("deno", {
+			args: ["cache", "--quiet", tempEntry],
+			stdout: "piped",
+			stderr: "piped",
+			cwd: tempDir,
+		});
+
+		const vendorOutput = await vendorCmd.output();
+		if (!vendorOutput.success) {
+			const stderr = new TextDecoder().decode(vendorOutput.stderr);
+			log.warn("bundleService.cache.warn", { stderr });
+			// Continue anyway - cache might already exist
+		}
+
+		// Step 2: Read the processed code and inline SDK manually
+		const visited = new Set<string>();
+		const inlined = await inlineAllImports(tempEntry, visited, projectRoot);
+
+		return inlined;
+	} finally {
+		// Cleanup temp files
+		try {
+			await Deno.remove(tempDir, { recursive: true });
+		} catch {
+			// Ignore cleanup errors
+		}
+	}
+}
+
+export interface BundleResult {
+	/** Entry point for sandbox execution (data URL or file path) */
+	entry: string;
+	/** The bundled code */
+	code: string;
+	/** Whether this bundle uses npm packages (affects sandbox permissions) */
+	hasNpm: boolean;
+}
+
 export async function bundleService(
 	servicePath: string,
-): Promise<{ dataUrl: string; code: string }> {
+): Promise<BundleResult> {
 	try {
 		const projectRoot = Deno.cwd();
 		const svcMeta = await readFile(servicePath);
@@ -163,35 +303,75 @@ export async function bundleService(
 		const cacheKey = `${servicePath}::${sdkSig}`;
 		const prev = cache.get(cacheKey);
 		if (prev && prev.mtimeSvc === svcMeta.mtime && prev.sdkSig === sdkSig) {
-			return { dataUrl: prev.url, code: prev.code };
+			return {
+				entry: prev.url,
+				code: prev.code,
+				hasNpm: prev.hasNpm || false,
+			};
 		}
 
-		// Start from the service file; inlining will pull in SDK via @sdk/ imports.
-		const visited = new Set<string>();
-		let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
-		// If service forgot to import SDK, inject it explicitly.
-		if (!inlinedService.includes("@sdk/mod.ts")) {
-			inlinedService = `import \"@sdk/mod.ts\";\n${inlinedService}`;
+		// Check for npm imports in the service file
+		const { hasNpm, disallowed } = detectNpmImports(svcMeta.code);
+
+		if (disallowed.length > 0) {
+			throw new Error(
+				`Service uses disallowed npm packages: ${disallowed.join(", ")}. ` +
+				`Only packages in the allowlist can be used.`
+			);
 		}
 
-		// After inlining, strip ANY remaining import statements (they cannot
-		// resolve from a data: URL and would cause "invalid URL: relative URL with a cannot-be-a-base base")
-		// This is a safety net in case some imports weren't properly inlined.
-		const importStripRegex =
-			/^(?:\s*import\s+(?:type\s+)?(?:[^'";]+from\s+)?["'][^"']*["'];?\s*)$/gm;
-		const sanitized = inlinedService.replace(importStripRegex, "");
+		let finalCode: string;
 
-		// Collapse multiple blank lines introduced by removals for neatness.
-		const finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
+		if (hasNpm) {
+			// Use esbuild approach for services with npm dependencies
+			log.info("bundleService.npm", { servicePath, strategy: "esbuild" });
+			finalCode = await bundleWithEsbuild(servicePath, projectRoot);
 
-		// Encode as data URL
-		const enc = new TextEncoder().encode(finalCode);
-		let binary = "";
-		for (const b of enc) binary += String.fromCharCode(b);
-		const url = `data:application/typescript;base64,${btoa(binary)}`;
+			// For npm services, write to a temp file instead of data URL
+			// because npm: imports don't work in data URLs
+			const bundleDir = await getNpmBundleDir();
+			const hash = await simpleHash(servicePath + sdkSig);
+			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
+			await Deno.writeTextFile(tempFilePath, finalCode);
 
-		cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime });
-		return { dataUrl: url, code: finalCode };
+			cache.set(cacheKey, {
+				url: tempFilePath,
+				code: finalCode,
+				sdkSig,
+				mtimeSvc: svcMeta.mtime,
+				hasNpm: true,
+				tempFilePath,
+			});
+			return { entry: tempFilePath, code: finalCode, hasNpm: true };
+		} else {
+			// Use manual inlining for services without npm (faster)
+			const visited = new Set<string>();
+			let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
+
+			// If service forgot to import SDK, inject it explicitly.
+			if (!inlinedService.includes("@sdk/mod.ts")) {
+				inlinedService = `import \"@sdk/mod.ts\";\n${inlinedService}`;
+			}
+
+			// After inlining, strip ANY remaining import statements (they cannot
+			// resolve from a data: URL and would cause "invalid URL: relative URL with a cannot-be-a-base base")
+			// This is a safety net in case some imports weren't properly inlined.
+			const importStripRegex =
+				/^(?:\s*import\s+(?:type\s+)?(?:[^'";]+from\s+)?["'][^"']*["'];?\s*)$/gm;
+			const sanitized = inlinedService.replace(importStripRegex, "");
+
+			// Collapse multiple blank lines introduced by removals for neatness.
+			finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
+
+			// Encode as data URL
+			const enc = new TextEncoder().encode(finalCode);
+			let binary = "";
+			for (const b of enc) binary += String.fromCharCode(b);
+			const url = `data:application/typescript;base64,${btoa(binary)}`;
+
+			cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false });
+			return { entry: url, code: finalCode, hasNpm: false };
+		}
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });
 		throw err;
@@ -206,8 +386,16 @@ export function clearBundleCache() {
 export async function bundleAndHash(
 	servicePath: string,
 	hashFn: (code: string) => Promise<string>,
-): Promise<{ bundleHash: string; dataUrl: string; code: string }> {
-	const { code, dataUrl } = await bundleService(servicePath);
+): Promise<{ bundleHash: string; entry: string; code: string; hasNpm: boolean }> {
+	const { code, entry, hasNpm } = await bundleService(servicePath);
 	const bundleHash = await hashFn(code);
-	return { bundleHash, dataUrl, code };
+	return { bundleHash, entry, code, hasNpm };
+}
+
+// Legacy compatibility - returns dataUrl field for backwards compatibility
+export async function bundleServiceLegacy(
+	servicePath: string,
+): Promise<{ dataUrl: string; code: string }> {
+	const result = await bundleService(servicePath);
+	return { dataUrl: result.entry, code: result.code };
 }

@@ -2,6 +2,24 @@
 // Moved from src/core/sandbox.ts
 import type { ExecutePayload, SandboxCaps, SandboxResult } from "@schema/sandbox.ts";
 
+// Get Deno cache directory for npm packages
+function getDenoCacheDir(): string {
+	// Check DENO_DIR env first, then default locations
+	const denoDir = Deno.env.get("DENO_DIR");
+	if (denoDir) return denoDir;
+
+	// Default cache locations by OS
+	const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
+	if (Deno.build.os === "darwin") {
+		return `${home}/Library/Caches/deno`;
+	} else if (Deno.build.os === "windows") {
+		return `${Deno.env.get("LOCALAPPDATA") || home}/deno`;
+	} else {
+		// Linux and others
+		return `${Deno.env.get("XDG_CACHE_HOME") || `${home}/.cache`}/deno`;
+	}
+}
+
 export class SandboxHost {
 	async run<T = unknown>(
 		entry: string,
@@ -23,7 +41,18 @@ export class SandboxHost {
 			"run",
 			"--quiet",
 			"--no-remote", // deny fetching remote modules (dynamic import of URLs will fail)
-		]; // no permissions granted
+		];
+
+		// If the service uses npm packages, we need to allow reading from the Deno cache
+		// and the temp bundle file. This is safe because:
+		// 1. The packages were pre-vetted against the allowlist
+		// 2. The temp file was created by the bundler
+		if (caps.hasNpm) {
+			const cacheDir = getDenoCacheDir();
+			// Allow reading from cache dir (for npm packages) and /tmp (for bundle file)
+			args.push(`--allow-read=${cacheDir},/tmp`);
+		}
+
 		args.push(entry);
 		const cmd = new Deno.Command("deno", {
 			args,

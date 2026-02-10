@@ -83,6 +83,19 @@ export const migrations: Migration[] = [
 			);
 		},
 	},
+	{
+		id: 4,
+		name: "add_service_bundles_has_npm",
+		up: (db: DB) => {
+			// Add has_npm column to service_bundles table
+			// Default 0 for existing bundles (they were created before npm support)
+			try {
+				db.execute(`ALTER TABLE service_bundles ADD COLUMN has_npm INTEGER NOT NULL DEFAULT 0;`);
+			} catch (_err) {
+				// Column might already exist
+			}
+		},
+	},
 ];
 
 export function runMigrations(db: DB): void {

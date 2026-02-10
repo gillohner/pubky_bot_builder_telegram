@@ -4,6 +4,7 @@ import type { CallbackEvent, CommandEvent } from "@sdk/mod.ts";
 import {
 	LINK_CATEGORIES,
 	LINKS_COMMAND,
+	LINKS_DATASET_SCHEMAS,
 	LINKS_SERVICE_ID,
 	LINKS_VERSION,
 	renderCategory,
@@ -30,6 +31,7 @@ const service = defineService({
 	kind: "single_command",
 	command: LINKS_COMMAND,
 	description: "Display categorized links with inline navigation",
+	datasetSchemas: LINKS_DATASET_SCHEMAS,
 	handlers: {
 		command: (_ev: CommandEvent) =>
 			reply("Select a category:", {

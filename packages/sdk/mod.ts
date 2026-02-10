@@ -7,6 +7,7 @@ export * from "./responses/factory.ts";
 export * from "./responses/guards.ts";
 export * from "./i18n.ts";
 export * from "./ui.ts"; // includes inlineKeyboard + builders
+export * from "./schema.ts"; // JSON Schema types for config/dataset validation
 export { runService } from "./runner.ts";
 export { SERVICE_PROTOCOL_SCHEMA_VERSION } from "./services_types.ts";
 export type {

@@ -135,9 +135,10 @@ export async function buildSnapshot(
 		if (!existing) {
 			saveServiceBundle({
 				bundle_hash: b.bundleHash,
-				data_url: b.dataUrl,
+				data_url: b.entry, // entry is either data URL or file path
 				code: b.code,
 				created_at: Date.now(),
+				has_npm: b.hasNpm ? 1 : 0,
 			});
 		}
 	}

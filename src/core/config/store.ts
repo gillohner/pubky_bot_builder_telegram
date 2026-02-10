@@ -34,6 +34,7 @@ export interface ServiceBundleRecord {
 	data_url: string;
 	code: string;
 	created_at: number;
+	has_npm?: number; // 0 or 1, indicates if bundle uses npm packages
 }
 
 // ---------------------------------------------------------------------------
@@ -154,25 +155,25 @@ export function deleteSnapshotByConfigHash(configHash: string): void {
 export function saveServiceBundle(rec: ServiceBundleRecord): void {
 	const database = ensureDb();
 	database.query(
-		`INSERT INTO service_bundles (bundle_hash, data_url, code, created_at)
-         VALUES (?, ?, ?, ?)
+		`INSERT INTO service_bundles (bundle_hash, data_url, code, created_at, has_npm)
+         VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(bundle_hash) DO NOTHING`,
-		[rec.bundle_hash, rec.data_url, rec.code, rec.created_at],
+		[rec.bundle_hash, rec.data_url, rec.code, rec.created_at, rec.has_npm ?? 0],
 	);
 }
 
 export function getServiceBundle(bundleHash: string): ServiceBundleRecord | undefined {
 	const database = ensureDb();
 	const row = database
-		.query<[string, string, string, number]>(
-			`SELECT bundle_hash, data_url, code, created_at
+		.query<[string, string, string, number, number]>(
+			`SELECT bundle_hash, data_url, code, created_at, has_npm
              FROM service_bundles WHERE bundle_hash = ?`,
 			[bundleHash],
 		)
 		.at(0);
 	if (!row) return undefined;
-	const [hash, dataUrl, code, createdAt] = row;
-	return { bundle_hash: hash, data_url: dataUrl, code, created_at: createdAt };
+	const [hash, dataUrl, code, createdAt, hasNpm] = row;
+	return { bundle_hash: hash, data_url: dataUrl, code, created_at: createdAt, has_npm: hasNpm };
 }
 
 export function listAllBundleHashes(): string[] {

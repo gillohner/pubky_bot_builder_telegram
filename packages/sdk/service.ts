@@ -2,6 +2,7 @@
 // Service definition related types & helper.
 import type { CallbackEvent, CommandEvent, MessageEvent } from "./events.ts";
 import type { ServiceResponse } from "./responses/types.ts";
+import type { DatasetSchemas, JSONSchema } from "./schema.ts";
 
 export type ServiceKind = "single_command" | "command_flow" | "listener" | "periodic_command";
 
@@ -11,6 +12,12 @@ export interface ServiceDefinition {
 	kind: ServiceKind;
 	command?: string; // optional - injected if omitted (non-listener kinds only)
 	description?: string; // optional - injected if omitted
+	/** NPM packages required by this service (must be in allowed list) */
+	npmDependencies?: string[];
+	/** JSON Schema for validating service config */
+	configSchema?: JSONSchema;
+	/** JSON Schemas for validating each named dataset */
+	datasetSchemas?: DatasetSchemas;
 	handlers: {
 		command: (ev: CommandEvent) => ServiceResponse | Promise<ServiceResponse>;
 		callback: (ev: CallbackEvent) => ServiceResponse | Promise<ServiceResponse>;
@@ -25,6 +32,12 @@ export interface ServiceManifest {
 	command: string;
 	description?: string;
 	schemaVersion: number;
+	/** NPM packages required by this service */
+	npmDependencies?: string[];
+	/** JSON Schema for validating service config */
+	configSchema?: JSONSchema;
+	/** JSON Schemas for validating each named dataset */
+	datasetSchemas?: DatasetSchemas;
 }
 
 export interface DefinedService extends ServiceDefinition {
@@ -54,6 +67,9 @@ export function defineService(def: ServiceDefinition): DefinedService {
 			command,
 			description,
 			schemaVersion: SERVICE_SDK_SCHEMA_VERSION,
+			npmDependencies: def.npmDependencies,
+			configSchema: def.configSchema,
+			datasetSchemas: def.datasetSchemas,
 		},
 	}) as DefinedService;
 }
