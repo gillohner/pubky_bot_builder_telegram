@@ -29,7 +29,7 @@ export function handleRequiredFieldInput(ev: MessageEvent) {
 	}
 }
 
-function handleTitleInput(text: string, st: EventCreatorState) {
+function handleTitleInput(text: string, _st: EventCreatorState) {
 	const validation = validateTitle(text);
 	if (!validation.valid) {
 		return reply(validation.error!);
@@ -48,7 +48,7 @@ function handleTitleInput(text: string, st: EventCreatorState) {
 	);
 }
 
-function handleDateInput(text: string, st: EventCreatorState) {
+function handleDateInput(text: string, _st: EventCreatorState) {
 	const validation = validateDate(text);
 	if (!validation.valid) {
 		return reply(validation.error!);

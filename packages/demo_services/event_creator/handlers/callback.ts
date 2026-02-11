@@ -3,7 +3,6 @@
 
 import { type CallbackEvent, reply, state } from "@sdk/mod.ts";
 import { CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
-import type { EventCreatorState } from "../types.ts";
 import { handleCalendarToggle, handleCalendarMenu } from "../flows/calendar.ts";
 import { handleEditField, handleEditMenu } from "../flows/edit.ts";
 import { handleOptionalMenuAction } from "../flows/optional_menu.ts";
@@ -65,7 +64,6 @@ function handleCalendarCallback(ev: CallbackEvent, data: string) {
 
 	if (action === "back") {
 		// Return to optional menu
-		const st = (ev.state ?? {}) as EventCreatorState;
 		return handleOptionalMenuAction(ev, "back");
 	}
 

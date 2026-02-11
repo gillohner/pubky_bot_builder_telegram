@@ -176,7 +176,7 @@ function handleLocationInput(text: string, st: EventCreatorState, ev: MessageEve
 	return showOptionalMenu(updatedState, ev);
 }
 
-async function handleEndDateInput(text: string, st: EventCreatorState, ev: MessageEvent) {
+async function handleEndDateInput(text: string, _st: EventCreatorState, _ev: MessageEvent) {
 	// Import validation here to avoid circular deps
 	const { validateDate } = await import("../utils/validation.ts");
 	const validation = validateDate(text);

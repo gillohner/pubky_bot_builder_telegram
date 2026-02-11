@@ -2,7 +2,7 @@
 // Event submission and approval flow
 
 import { createEvent, type Location, validateTimezone } from "@eventky/mod.ts";
-import { type CallbackEvent, error, pubkyWrite, reply, state } from "@sdk/mod.ts";
+import { type CallbackEvent, error, pubkyWrite, state } from "@sdk/mod.ts";
 import { DEFAULT_RETURN_TEMPLATE } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { getAllCalendarUris } from "../utils/calendar.ts";

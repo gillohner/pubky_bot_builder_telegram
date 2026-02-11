@@ -4,7 +4,7 @@
 import { type CallbackEvent, type MessageEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import { SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
-import { getEditPrompt, getFieldDisplayName, isFieldClearable } from "../utils/state.ts";
+import { getEditPrompt, isFieldClearable } from "../utils/state.ts";
 import {
 	validateDate,
 	validateDescription,
@@ -49,8 +49,7 @@ export function handleEditMenu(ev: CallbackEvent) {
 	});
 }
 
-export function handleEditField(ev: CallbackEvent, field: string) {
-	const st = (ev.state ?? {}) as EventCreatorState;
+export function handleEditField(_ev: CallbackEvent, field: string) {
 	const prompt = getEditPrompt(field);
 
 	return reply(prompt, {

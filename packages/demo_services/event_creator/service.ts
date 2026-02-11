@@ -4,7 +4,7 @@
 
 import { defineService, runService } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
-import { DEFAULT_COMMAND, SERVICE_ID, SERVICE_KIND, SERVICE_VERSION } from "./constants.ts";
+import { SERVICE_ID, SERVICE_KIND, SERVICE_VERSION } from "./constants.ts";
 import { handleCommand } from "./handlers/command.ts";
 import { handleCallback } from "./handlers/callback.ts";
 import { handleMessage } from "./handlers/message.ts";
