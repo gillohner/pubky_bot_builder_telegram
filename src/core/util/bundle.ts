@@ -89,17 +89,19 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));
 		let resolved = `${baseDir}/${importPath}`;
-		// Normalize path segments (resolve .. and .)
-		const parts = resolved.split("/");
-		const normalized: string[] = [];
-		for (const part of parts) {
-			if (part === "..") {
-				normalized.pop();
-			} else if (part !== ".") {
-				normalized.push(part);
+		// Normalize .. segments while preserving leading ./
+		if (resolved.includes("..")) {
+			const parts = resolved.split("/");
+			const normalized: string[] = [];
+			for (const part of parts) {
+				if (part === "..") {
+					normalized.pop();
+				} else {
+					normalized.push(part);
+				}
 			}
+			resolved = normalized.join("/");
 		}
-		resolved = normalized.join("/");
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
 	}
