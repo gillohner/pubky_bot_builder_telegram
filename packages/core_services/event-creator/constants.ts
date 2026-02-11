@@ -71,7 +71,7 @@ export interface EventCreatorConfig {
 /**
  * Schema for a single CalendarOption object
  */
-const CALENDAR_OPTION_SCHEMA: JSONSchema = {
+export const CALENDAR_OPTION_SCHEMA: JSONSchema = {
 	type: "object",
 	title: "Calendar",
 	description: "A calendar that events can be published to",
