@@ -85,10 +85,21 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		// Map @eventky/ -> ./packages/eventky-specs/
 		return importPath.replace("@eventky/", "./packages/eventky-specs/");
 	}
-	if (importPath.startsWith("./")) {
+	if (importPath.startsWith("./") || importPath.startsWith("../")) {
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));
-		let resolved = `${baseDir}/${importPath.substring(2)}`;
+		let resolved = `${baseDir}/${importPath}`;
+		// Normalize path segments (resolve .. and .)
+		const parts = resolved.split("/");
+		const normalized: string[] = [];
+		for (const part of parts) {
+			if (part === "..") {
+				normalized.pop();
+			} else if (part !== ".") {
+				normalized.push(part);
+			}
+		}
+		resolved = normalized.join("/");
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
 	}
@@ -147,9 +158,9 @@ async function inlineAllImports(
 				continue;
 			}
 
-			// Prevent directory escape for security
-			if (importPath.includes("../")) {
-				log.warn("bundleService.security.escape", { entryPath, importPath });
+			// Prevent directory escape outside project root
+			if (!absolutePath.startsWith(projectRoot)) {
+				log.warn("bundleService.security.escape", { entryPath, importPath, absolutePath });
 				chunks.push(fullStatement); // Preserve original
 				continue;
 			}
