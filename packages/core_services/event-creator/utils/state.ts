@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/utils/state.ts
+// packages/core_services/event-creator/utils/state.ts
 // State management utilities
 
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";

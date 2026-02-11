@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/flows/required.ts
+// packages/core_services/event-creator/flows/required.ts
 // Required field collection flow (title, date, time)
 
 import { type MessageEvent, reply, state } from "@sdk/mod.ts";

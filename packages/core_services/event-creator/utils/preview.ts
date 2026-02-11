@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/utils/preview.ts
+// packages/core_services/event-creator/utils/preview.ts
 // Preview generation for admin approval
 
 import type { PubkyAppEvent } from "@eventky/mod.ts";

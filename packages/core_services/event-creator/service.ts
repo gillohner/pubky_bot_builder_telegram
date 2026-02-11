@@ -1,18 +1,27 @@
-// packages/demo_services/event_creator/service.ts
+// packages/core_services/event-creator/service.ts
 // Enhanced event creator service for Eventky - creates events on Pubky with admin approval
 // v2.0.0 - Two-phase flow with optional fields, image uploads, and multi-calendar support
 
 import { defineService, runService } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
-import { SERVICE_ID, SERVICE_KIND, SERVICE_VERSION } from "./constants.ts";
+import {
+	EVENT_CREATOR_CONFIG_SCHEMA,
+	EVENT_CREATOR_DATASET_SCHEMAS,
+	EVENT_CREATOR_SERVICE_ID,
+	EVENT_CREATOR_VERSION,
+	SERVICE_KIND,
+} from "./constants.ts";
 import { handleCommand } from "./handlers/command.ts";
 import { handleCallback } from "./handlers/callback.ts";
 import { handleMessage } from "./handlers/message.ts";
 
 const service = defineService({
-	id: SERVICE_ID,
-	version: SERVICE_VERSION,
+	id: EVENT_CREATOR_SERVICE_ID,
+	version: EVENT_CREATOR_VERSION,
 	kind: SERVICE_KIND,
+	description: "Creates events on Pubky with admin approval, image uploads, and multi-calendar support",
+	configSchema: EVENT_CREATOR_CONFIG_SCHEMA,
+	datasetSchemas: EVENT_CREATOR_DATASET_SCHEMAS,
 
 	handlers: {
 		command: (ev: CommandEvent) => handleCommand(ev),

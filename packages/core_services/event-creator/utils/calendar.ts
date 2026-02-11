@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/utils/calendar.ts
+// packages/core_services/event-creator/utils/calendar.ts
 // Calendar configuration utilities
 
 import type { CalendarOption, EventCreatorConfig, EventCreatorState } from "../types.ts";

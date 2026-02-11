@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/flows/edit.ts
+// packages/core_services/event-creator/flows/edit.ts
 // Field editing handlers
 
 import { type CallbackEvent, type MessageEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";

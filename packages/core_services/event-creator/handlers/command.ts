@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/handlers/command.ts
+// packages/core_services/event-creator/handlers/command.ts
 // Command handler for starting the event creation flow
 
 import { reply, state, type CommandEvent } from "@sdk/mod.ts";

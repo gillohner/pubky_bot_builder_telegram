@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/flows/calendar.ts
+// packages/core_services/event-creator/flows/calendar.ts
 // Calendar selection and toggle handlers
 
 import { type CallbackEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";

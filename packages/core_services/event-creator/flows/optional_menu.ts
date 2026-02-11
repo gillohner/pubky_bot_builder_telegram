@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/flows/optional_menu.ts
+// packages/core_services/event-creator/flows/optional_menu.ts
 // Optional menu display and field addition handlers
 
 import { type CallbackEvent, type MessageEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";

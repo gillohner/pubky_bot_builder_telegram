@@ -1,5 +1,8 @@
-// packages/demo_services/event_creator/types.ts
+// packages/core_services/event-creator/types.ts
 // Type definitions for the enhanced event creator service
+
+// Re-export types that moved to constants.ts for schema co-location
+export type { CalendarOption, EventCreatorConfig } from "./constants.ts";
 
 export type EventPhase = "required" | "optional_menu" | "editing";
 
@@ -29,27 +32,4 @@ export interface EventCreatorState {
 
 	// Index signature for SDK compatibility
 	[key: string]: unknown;
-}
-
-export interface CalendarOption {
-	uri: string; // pubky://user/pub/eventky.app/calendars/{id}
-	name: string; // Display name
-	description?: string;
-	isDefault?: boolean;
-}
-
-export interface EventCreatorConfig {
-	// Calendar configuration (legacy and new)
-	calendarUri?: string; // Legacy single calendar
-	calendars?: CalendarOption[]; // New multi-calendar mode
-	defaultCalendar?: string; // Default calendar URI
-
-	// Display & behavior
-	defaultTimezone?: string; // e.g., "Europe/Vienna"
-	returnMessageTemplate?: string; // Template with {url}, {title}, etc.
-
-	// Optional field requirements
-	requireLocation?: boolean;
-	requireImage?: boolean;
-	requireEndTime?: boolean;
 }

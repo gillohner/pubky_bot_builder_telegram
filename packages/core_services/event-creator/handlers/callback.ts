@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/handlers/callback.ts
+// packages/core_services/event-creator/handlers/callback.ts
 // Callback handler router for optional menu and calendar selection
 
 import { type CallbackEvent, reply, state } from "@sdk/mod.ts";

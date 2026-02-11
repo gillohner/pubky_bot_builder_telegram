@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/handlers/message.ts
+// packages/core_services/event-creator/handlers/message.ts
 // Message handler for text input and image uploads
 
 import { type MessageEvent, reply, state } from "@sdk/mod.ts";

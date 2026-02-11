@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/flows/submit.ts
+// packages/core_services/event-creator/flows/submit.ts
 // Event submission and approval flow
 
 import { createEvent, type Location, validateTimezone } from "@eventky/mod.ts";

@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/utils/validation.ts
+// packages/core_services/event-creator/utils/validation.ts
 // Field validation utilities
 
 import { DATE_REGEX, MAX_DESCRIPTION_LENGTH, MAX_LOCATION_NAME_LENGTH, MAX_TITLE_LENGTH, TIME_REGEX } from "../constants.ts";

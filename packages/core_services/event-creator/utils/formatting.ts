@@ -1,4 +1,4 @@
-// packages/demo_services/event_creator/utils/formatting.ts
+// packages/core_services/event-creator/utils/formatting.ts
 // Date/time and URL formatting utilities
 
 import { EVENTKY_APP_BASE } from "../constants.ts";

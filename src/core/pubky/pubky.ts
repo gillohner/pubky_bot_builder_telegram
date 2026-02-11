@@ -128,7 +128,7 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				name: "Event Creator",
 				command: "newevent",
 				kind: "command_flow",
-				entry: "./packages/demo_services/event_creator/service.ts",
+				entry: "./packages/core_services/event-creator/service.ts",
 				config: {
 					// calendarUri: "pubky://your-pk/pub/eventky.app/calendars/your-calendar-id",
 					defaultTimezone: "UTC",
