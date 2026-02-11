@@ -57,13 +57,19 @@ const service = defineService({
             // Get triggers dataset
             let triggers: TriggerwordsDataset = DEFAULT_DATASET;
             const datasets = ev.datasets as Record<string, unknown> | undefined;
+            console.debug("Triggerwords datasets received:", JSON.stringify(datasets));
+            console.debug("Triggerwords config received:", JSON.stringify(ev.serviceConfig));
             if (datasets?.triggers) {
                 const validation = validateDataset(datasets.triggers);
+                console.debug("Dataset validation result:", JSON.stringify(validation));
                 if (validation.valid) {
                     triggers = datasets.triggers as TriggerwordsDataset;
+                    console.debug("Using custom triggers dataset with", triggers.entries?.length, "entries");
                 } else {
                     console.error("Triggerwords dataset validation errors:", validation.errors);
                 }
+            } else {
+                console.debug("No triggers dataset provided, using DEFAULT_DATASET");
             }
 
             // Find matching entry

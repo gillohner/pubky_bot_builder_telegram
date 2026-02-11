@@ -220,6 +220,71 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 };
 
 /**
+ * Parse a GitHub/GitLab URL into a structured source object.
+ * E.g., "https://github.com/user/repo/tree/main/packages/services/hello"
+ * becomes { type: "github", location: "user/repo", entry: "./packages/services/hello/service.ts" }
+ */
+function parseGitSourceUrl(url: string): PubkyServiceRegistryEntry["source"] {
+	try {
+		const parsed = new URL(url);
+		const hostname = parsed.hostname.toLowerCase();
+		const pathParts = parsed.pathname.split("/").filter(Boolean);
+
+		if (pathParts.length < 2) {
+			throw new Error(`Invalid git URL: ${url}`);
+		}
+
+		const owner = pathParts[0];
+		const repo = pathParts[1];
+		let branch = "master";
+		let path = "";
+
+		// Handle GitHub URLs: github.com/owner/repo/tree/branch/path
+		if (hostname === "github.com" || hostname === "www.github.com") {
+			if (pathParts.length > 3 && (pathParts[2] === "tree" || pathParts[2] === "blob")) {
+				branch = pathParts[3];
+				path = pathParts.slice(4).join("/");
+			} else if (pathParts.length > 2) {
+				path = pathParts.slice(2).join("/");
+			}
+
+			return {
+				type: "github",
+				location: `${owner}/${repo}`,
+				entry: path ? `./${path}/service.ts` : "./service.ts",
+				version: branch,
+			};
+		}
+
+		// Handle GitLab URLs
+		if (hostname === "gitlab.com" || hostname === "www.gitlab.com") {
+			if (pathParts.length > 4 && pathParts[2] === "-" && pathParts[3] === "tree") {
+				branch = pathParts[4];
+				path = pathParts.slice(5).join("/");
+			} else if (pathParts.length > 2) {
+				path = pathParts.slice(2).join("/");
+			}
+
+			return {
+				type: "github", // Use github type for GitLab too since they work similarly
+				location: `${owner}/${repo}`,
+				entry: path ? `./${path}/service.ts` : "./service.ts",
+				version: branch,
+			};
+		}
+
+		// Fallback for unknown providers
+		return {
+			type: "github",
+			location: `${owner}/${repo}`,
+			entry: path ? `./${path}/service.ts` : "./service.ts",
+		};
+	} catch (e) {
+		throw new Error(`Failed to parse git source URL: ${url} - ${(e as Error).message}`);
+	}
+}
+
+/**
  * Convert a pubky:// URL to Address format for publicStorage
  * The SDK accepts both 'pubky<pk>/pub/...' and 'pubky://<pk>/pub/...' formats
  */
@@ -248,16 +313,25 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 		const json = await publicStorage.getJson(address);
 		console.log("Fetched Pubky config:", json);
 
-		// Check if this is a new modular bot config
+		// Check if this is a new modular bot config (from web configurator)
+		// Supports both serviceConfigRef (new format) and serviceConfigUri (legacy format)
 		if (
-			json && typeof json === "object" && (json as Record<string, unknown>).services &&
-			Array.isArray((json as Record<string, unknown>).services)
+			json && typeof json === "object"
 		) {
-			const services = (json as Record<string, unknown>).services as unknown[];
-			if (
-				services.length > 0 && typeof services[0] === "object" && services[0] !== null &&
-				(services[0] as Record<string, unknown>).serviceConfigRef
-			) {
+			const botConfig = json as Record<string, unknown>;
+			const services = botConfig.services as unknown[] | undefined;
+			const listeners = botConfig.listeners as unknown[] | undefined;
+
+			// Check if any service/listener has the modular format (serviceConfigRef or serviceConfigUri)
+			const hasModularFormat = (arr: unknown[] | undefined): boolean => {
+				if (!Array.isArray(arr) || arr.length === 0) return false;
+				const first = arr[0];
+				if (typeof first !== "object" || first === null) return false;
+				const entry = first as Record<string, unknown>;
+				return typeof entry.serviceConfigRef === "string" || typeof entry.serviceConfigUri === "string";
+			};
+
+			if (hasModularFormat(services) || hasModularFormat(listeners)) {
 				// Create a wrapper to match our PubkyClient interface
 				const clientWrapper: PubkyClient = {
 					async fetch(url: string) {
@@ -282,7 +356,9 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 						}
 					},
 				};
-				return await resolveModularBotConfig(json as PubkyBotConfig, clientWrapper);
+				// Normalize to use serviceConfigRef
+				const normalizedConfig = normalizeModularBotConfig(botConfig);
+				return await resolveModularBotConfig(normalizedConfig, clientWrapper);
 			}
 		}
 
@@ -297,6 +373,70 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 
 export function listPubkyTemplateIds(): string[] {
 	return Object.keys(TEMPLATES);
+}
+
+/**
+ * Normalize a modular bot config from the web configurator format to the expected format.
+ * Handles conversion from serviceConfigUri to serviceConfigRef and normalizes overrides.
+ */
+function normalizeModularBotConfig(config: Record<string, unknown>): PubkyBotConfig {
+	const normalizeRef = (ref: Record<string, unknown>): PubkyBotServiceRef => {
+		// Support both serviceConfigRef (new) and serviceConfigUri (legacy)
+		const configUrl = (ref.serviceConfigRef || ref.serviceConfigUri) as string;
+		if (!configUrl) {
+			throw new Error("Service reference missing serviceConfigRef or serviceConfigUri");
+		}
+
+		// Normalize overrides from legacy format (commandOverride, configOverrides, datasetOverrides)
+		// to new format (overrides.command, overrides.config, overrides.datasets)
+		let overrides: PubkyBotServiceRef["overrides"] | undefined;
+
+		if (ref.overrides && typeof ref.overrides === "object") {
+			// Already in new format
+			overrides = ref.overrides as PubkyBotServiceRef["overrides"];
+		} else {
+			// Legacy format
+			const legacyOverrides: PubkyBotServiceRef["overrides"] = {};
+			if (typeof ref.commandOverride === "string") {
+				legacyOverrides.command = ref.commandOverride;
+			}
+			if (ref.configOverrides && typeof ref.configOverrides === "object") {
+				legacyOverrides.config = ref.configOverrides as Record<string, unknown>;
+			}
+			if (ref.datasetOverrides && typeof ref.datasetOverrides === "object") {
+				legacyOverrides.datasets = ref.datasetOverrides as Record<string, string>;
+			}
+			if (Object.keys(legacyOverrides).length > 0) {
+				overrides = legacyOverrides;
+			}
+		}
+
+		return {
+			serviceConfigRef: configUrl,
+			overrides,
+			adminOnly: ref.adminOnly as boolean | undefined,
+		};
+	};
+
+	const services = Array.isArray(config.services)
+		? (config.services as Record<string, unknown>[])
+			.filter((s) => (s.enabled !== false)) // Only include enabled services
+			.map(normalizeRef)
+		: [];
+
+	const listeners = Array.isArray(config.listeners)
+		? (config.listeners as Record<string, unknown>[])
+			.filter((l) => (l.enabled !== false)) // Only include enabled listeners
+			.map(normalizeRef)
+		: [];
+
+	return {
+		configId: (config.configId as string) || "unknown",
+		description: config.description as string | undefined,
+		version: config.version as string | undefined,
+		services,
+		listeners,
+	};
 }
 
 // Interface for Pubky client to avoid 'any' type
@@ -354,50 +494,73 @@ async function resolveServiceRef(
 	if (!configResponse.ok) {
 		throw new Error(`Failed to fetch service config from ${serviceRef.serviceConfigRef}`);
 	}
-	const serviceConfig = await configResponse.json() as PubkyServiceConfig;
+	const rawConfig = await configResponse.json() as Record<string, unknown>;
 
-	// Two resolution paths:
-	// A) Registry-based: registryRef + serviceId
-	// B) Inline: kind + source
+	// Handle both formats:
+	// A) Web configurator format: { source: "https://github.com/...", kind: "listener", command: "cmd" }
+	// B) Structured format: { registryRef, serviceId } or { kind, source: { type, location } }
+
 	let resolvedKind: PubkyServiceRegistryEntry["kind"];
 	let resolvedSource: PubkyServiceRegistryEntry["source"];
-	let resolvedName = serviceConfig.name;
+	let resolvedName = rawConfig.name as string;
+	let resolvedCommand = rawConfig.command as string | undefined;
 	let resolvedVersion: string | undefined;
 
-	if (serviceConfig.registryRef && serviceConfig.serviceId) {
-		// A) Registry-based resolution
-		const registryResponse = await client.fetch(serviceConfig.registryRef);
-		if (!registryResponse.ok) {
-			throw new Error(`Failed to fetch service registry from ${serviceConfig.registryRef}`);
-		}
-		const registry = await registryResponse.json() as PubkyServiceRegistry;
+	// Check if source is a URL string (web configurator format)
+	if (typeof rawConfig.source === "string" && rawConfig.source.startsWith("http")) {
+		// Web configurator format - source is a GitHub/GitLab URL
+		const sourceUrl = rawConfig.source as string;
+		const parsedSource = parseGitSourceUrl(sourceUrl);
 
-		const registryEntry = registry.services.find((s) => s.id === serviceConfig.serviceId);
-		if (!registryEntry) {
+		resolvedKind = (rawConfig.kind as PubkyServiceRegistryEntry["kind"]) ||
+			(rawConfig.manifest as Record<string, unknown>)?.kind as PubkyServiceRegistryEntry["kind"] ||
+			"single_command";
+		resolvedSource = parsedSource;
+		resolvedVersion = rawConfig.sourceVersion as string | undefined;
+
+		// Command can be at root level or in manifest
+		resolvedCommand = rawConfig.command as string ||
+			(rawConfig.manifest as Record<string, unknown>)?.command as string;
+	} else {
+		// Structured format (PubkyServiceConfig)
+		const serviceConfig = rawConfig as unknown as PubkyServiceConfig;
+
+		if (serviceConfig.registryRef && serviceConfig.serviceId) {
+			// A) Registry-based resolution
+			const registryResponse = await client.fetch(serviceConfig.registryRef);
+			if (!registryResponse.ok) {
+				throw new Error(`Failed to fetch service registry from ${serviceConfig.registryRef}`);
+			}
+			const registry = await registryResponse.json() as PubkyServiceRegistry;
+
+			const registryEntry = registry.services.find((s) => s.id === serviceConfig.serviceId);
+			if (!registryEntry) {
+				throw new Error(
+					`Service ${serviceConfig.serviceId} not found in registry ${serviceConfig.registryRef}`,
+				);
+			}
+			resolvedKind = registryEntry.kind;
+			resolvedSource = registryEntry.source;
+			resolvedName = serviceConfig.name || registryEntry.name;
+			resolvedVersion = registryEntry.source.version;
+			resolvedCommand = serviceConfig.command;
+		} else if (serviceConfig.kind && serviceConfig.source && typeof serviceConfig.source === "object") {
+			// B) Inline resolution with structured source
+			resolvedKind = serviceConfig.kind;
+			resolvedSource = serviceConfig.source;
+			resolvedVersion = serviceConfig.source.version;
+			resolvedCommand = serviceConfig.command;
+		} else {
 			throw new Error(
-				`Service ${serviceConfig.serviceId} not found in registry ${serviceConfig.registryRef}`,
+				"Invalid service config: expected either { registryRef, serviceId }, { kind, source: {...} }, or { source: 'url', kind, command }",
 			);
 		}
-		resolvedKind = registryEntry.kind;
-		resolvedSource = registryEntry.source;
-		// Prefer service-config name; fallback to registry name
-		resolvedName = serviceConfig.name || registryEntry.name;
-		resolvedVersion = registryEntry.source.version;
-	} else if (serviceConfig.kind && serviceConfig.source) {
-		// B) Inline resolution
-		resolvedKind = serviceConfig.kind;
-		resolvedSource = serviceConfig.source;
-		resolvedVersion = serviceConfig.source.version;
-	} else {
-		throw new Error(
-			"Invalid service config: expected either { registryRef, serviceId } or { kind, source }",
-		);
 	}
 
 	// Resolve datasets by fetching JSON blobs
 	const resolvedDatasets: Record<string, unknown> = {};
 	const allDatasets = {
-		...serviceConfig.datasets,
+		...(rawConfig.datasets as Record<string, string> | undefined),
 		...serviceRef.overrides?.datasets,
 	};
 
@@ -406,7 +569,9 @@ async function resolveServiceRef(
 			try {
 				const dataResponse = await client.fetch(url);
 				if (dataResponse.ok) {
-					resolvedDatasets[name] = await dataResponse.json();
+					const datasetJson = await dataResponse.json() as Record<string, unknown>;
+					// Dataset from configurator has the actual data in a 'data' field
+					resolvedDatasets[name] = datasetJson.data ?? datasetJson;
 				} else {
 					console.warn(`Failed to fetch dataset ${name} from ${url}`);
 					resolvedDatasets[name] = { __error: `Failed to fetch: ${dataResponse.status}` };
@@ -420,31 +585,46 @@ async function resolveServiceRef(
 
 	// Build the resolved service spec
 	const entry = determineServiceEntry({
-		id: serviceConfig.serviceId ?? serviceConfig.configId,
+		id: (rawConfig.manifest as Record<string, unknown>)?.serviceId as string ||
+			rawConfig.id as string ||
+			"unknown",
 		name: resolvedName,
 		kind: resolvedKind,
 		source: resolvedSource,
 	});
-	const command = serviceRef.overrides?.command || serviceConfig.command;
-	const config = {
-		...serviceConfig.config,
+
+	// Command comes from: override > service config > manifest
+	// Command is required for single_command and command_flow, but not for listeners
+	const command = serviceRef.overrides?.command || resolvedCommand;
+	if (!command && resolvedKind !== "listener") {
+		throw new Error(`Service config missing required 'command' field: ${serviceRef.serviceConfigRef}`);
+	}
+
+	const config: Record<string, unknown> = {
+		...(rawConfig.config as Record<string, unknown> | undefined),
 		...serviceRef.overrides?.config,
-		datasets: resolvedDatasets,
+		datasets: Object.keys(resolvedDatasets).length > 0 ? resolvedDatasets : undefined,
 	};
+
+	// Filter out undefined values
+	const filteredConfig = Object.fromEntries(
+		Object.entries(config).filter(([, v]) => v !== undefined)
+	);
 
 	return {
 		name: resolvedName,
-		command,
+		command: command || resolvedName.toLowerCase().replace(/\s+/g, "_"), // Fallback for listeners
 		kind: resolvedKind,
 		entry,
 		version: resolvedVersion,
 		source: `${resolvedSource.type}:${resolvedSource.location}`,
-		config: Object.keys(config).length > 0 ? config : undefined,
+		config: Object.keys(filteredConfig).length > 0 ? filteredConfig : undefined,
 	};
 }
 
 /**
- * Determine the entry point for a service based on its registry entry
+ * Determine the entry point for a service based on its registry entry.
+ * For GitHub sources pointing to this repository, maps to local paths.
  */
 function determineServiceEntry(registryEntry: PubkyServiceRegistryEntry): string {
 	switch (registryEntry.source.type) {
@@ -454,11 +634,27 @@ function determineServiceEntry(registryEntry: PubkyServiceRegistryEntry): string
 		case "jsr":
 			// For JSR packages, we'll need to resolve this at runtime
 			return `jsr:${registryEntry.source.location}@${registryEntry.source.version || "latest"}`;
-		case "github":
-			// For GitHub, we'll need to resolve this at runtime
-			return `github:${registryEntry.source.location}${
-				registryEntry.source.entry ? "#" + registryEntry.source.entry : ""
-			}`;
+		case "github": {
+			// For GitHub sources, check if it points to this repository and map to local path
+			const location = registryEntry.source.location;
+			const entry = registryEntry.source.entry || "./service.ts";
+
+			// If this is the pubky_bot_builder_telegram repo, resolve to local path
+			if (
+				location.includes("pubky_bot_builder_telegram") ||
+				location.includes("pubky-bot-builder-telegram")
+			) {
+				// The entry is already in the form "./packages/xxx/service.ts"
+				return entry.startsWith("./") ? entry : `./${entry}`;
+			}
+
+			// For external GitHub repos, we'd need to fetch and bundle remotely
+			// For now, treat the entry as a local path relative to the project
+			console.warn(
+				`GitHub source ${location} may not be available locally. Attempting to use entry: ${entry}`,
+			);
+			return entry.startsWith("./") ? entry : `./${entry}`;
+		}
 		default:
 			throw new Error(`Unsupported service source type: ${registryEntry.source.type}`);
 	}

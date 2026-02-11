@@ -245,9 +245,38 @@ export function buildMiddleware() {
 		log.debug("callback.processed", { chatId, data });
 	});
 
+	// Handler for new chat members - forward to listeners
+	composer.on("message:new_chat_members", async (ctx: Context) => {
+		const chatId = String(ctx.chat?.id ?? "");
+		const members = ctx.message?.new_chat_members ?? [];
+		log.info("new_chat_members.received", {
+			chatId,
+			count: members.length,
+			members: JSON.stringify(members),
+		});
+
+		await buildSnapshot(chatId);
+		const result = await dispatch({
+			kind: "message",
+			message: ctx.message,
+			ctx: { chatId, userId: String(ctx.from?.id ?? "") },
+		});
+		await applyServiceResponse(ctx, result.response);
+		log.debug("new_chat_members.processed", { chatId });
+	});
+
 	// Generic message listeners (forward as messages)
 	composer.on("message", async (ctx: Context, next: () => Promise<void>) => {
 		const chatId = String(ctx.chat?.id ?? "");
+		// Log new_chat_members for debugging
+		const msg = ctx.message as { new_chat_members?: unknown[] } | undefined;
+		if (msg?.new_chat_members) {
+			log.info("message.new_chat_members", {
+				chatId,
+				count: msg.new_chat_members.length,
+				members: JSON.stringify(msg.new_chat_members),
+			});
+		}
 		await buildSnapshot(chatId);
 		const result = await dispatch({
 			kind: "message",

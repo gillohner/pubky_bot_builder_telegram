@@ -2,9 +2,9 @@
 // URL Cleaner - Listener service that cleans tracking parameters and offers alt frontends
 import { defineService, none, reply, runService } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
-import { TidyURL } from "npm:tidy-url";
+import { TidyURL } from "npm:tidy-url@1";
 import {
-    ALT_FRONTENDS_DATASET_SCHEMA,
+    ALT_FRONTENDS_DATASET_SCHEMA as _ALT_FRONTENDS_DATASET_SCHEMA,
     DEFAULT_ALT_FRONTENDS,
     DEFAULT_CONFIG,
     URL_CLEANER_CONFIG_SCHEMA,

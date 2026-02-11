@@ -246,11 +246,38 @@ export async function buildSnapshot(
 	for (const l of template.listeners || []) {
 		const bundle = built[idx++];
 		const meta = await loadMeta(l.entry, l.command);
+		// Local file-based datasets (developer convenience)
+		const listenerDatasetsLocal = await loadDatasets(l.entry) || {};
+		// Pubky referenced datasets from service config (mapping name -> pubky:// URL)
+		const listenerConfigDatasetsRaw = (l.config?.datasets as Record<string, unknown> | undefined) || {};
+		for (const [k, v] of Object.entries(listenerConfigDatasetsRaw)) {
+			if (typeof v === "string") {
+				if (v.startsWith("pubky://")) {
+					// Normalize: remove trailing .json if present
+					const norm = v.replace(/\.json$/i, "");
+					// Store placeholder for unresolved pubky references (legacy path)
+					listenerDatasetsLocal[k] = { __pubkyRef: norm };
+				} else {
+					// Plain string values allowed (e.g., http URL), pass through
+					listenerDatasetsLocal[k] = v;
+				}
+			} else if (v !== null && typeof v === "object") {
+				// Already resolved JSON blob from modular Pubky resolver
+				listenerDatasetsLocal[k] = v as Record<string, unknown>;
+			} else {
+				// Primitive (number/boolean/null) – keep as-is
+				// deno-lint-ignore no-explicit-any
+				listenerDatasetsLocal[k] = v as any;
+			}
+		}
+		const listenerDatasets = Object.keys(listenerDatasetsLocal).length ? listenerDatasetsLocal : undefined;
 		listenerRoutes.push({
 			serviceId: meta.id,
 			kind: "listener",
 			bundleHash: bundle.bundleHash,
+			config: l.config,
 			meta,
+			datasets: listenerDatasets,
 		});
 	}
 

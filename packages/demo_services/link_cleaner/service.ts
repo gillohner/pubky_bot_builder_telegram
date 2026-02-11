@@ -2,7 +2,7 @@
 // Demonstrates using an npm package (tidy-url) in a service
 import { defineService, none, reply, runService, state } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent, JSONSchema } from "@sdk/mod.ts";
-import { TidyURL } from "npm:tidy-url";
+import { TidyURL } from "npm:tidy-url@1";
 import {
     LINK_CLEANER_COMMAND,
     LINK_CLEANER_SERVICE_ID,

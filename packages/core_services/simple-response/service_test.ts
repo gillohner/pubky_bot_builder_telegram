@@ -1,5 +1,5 @@
 // packages/core_services/simple-response/service_test.ts
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
+import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import type { CommandEvent, MessageEvent } from "@sdk/mod.ts";
 import type { ServiceResponse } from "@sdk/runtime.ts";
 import service from "./service.ts";

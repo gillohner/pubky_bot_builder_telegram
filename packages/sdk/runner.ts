@@ -4,6 +4,18 @@ import { error } from "./responses/factory.ts";
 import type { DefinedService } from "./service.ts";
 import type { GenericEvent } from "./events.ts";
 
+// Redirect console.log/debug/info to stderr to avoid polluting JSON response on stdout
+// This is important for npm packages that may output debug logs
+const _originalConsole = {
+	log: console.log.bind(console),
+	debug: console.debug.bind(console),
+	info: console.info.bind(console),
+};
+const stderrWrite = (msg: string) => Deno.stderr.writeSync(new TextEncoder().encode(msg + "\n"));
+console.log = (...args: unknown[]) => stderrWrite(args.map(String).join(" "));
+console.debug = (...args: unknown[]) => stderrWrite("[debug] " + args.map(String).join(" "));
+console.info = (...args: unknown[]) => stderrWrite("[info] " + args.map(String).join(" "));
+
 interface RawPayload {
 	event: GenericEvent;
 	ctx: {
