@@ -3,3 +3,4 @@
 
 export { default } from "./service.ts";
 export * from "./constants.ts";
+export * from "./types.ts";

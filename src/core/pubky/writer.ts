@@ -175,6 +175,7 @@ class PubkyWriter {
 
 	/**
 	 * Execute an approved write to Pubky.
+	 * Enhanced to handle image uploads via __image_file_id metadata.
 	 */
 	async executeWrite(id: string): Promise<boolean> {
 		if (!this.session) {
@@ -197,6 +198,7 @@ class PubkyWriter {
 			// Write to Pubky (path must be under /pub/)
 			type PubPath = `/pub/${string}`;
 			const pubPath = pending.path as PubPath;
+			let dataToWrite = pending.data;
 
 			log.debug("pubky.write.attempting", {
 				id,
@@ -205,7 +207,51 @@ class PubkyWriter {
 				publicKey: this.publicKey,
 			});
 
-			await this.session.storage.putJson(pubPath, pending.data);
+			// Check for image metadata (event creator service enhancement)
+			const data = pending.data as Record<string, unknown>;
+			if (data.__image_file_id && data.__event_data) {
+				log.info("pubky.write.image_detected", { id, fileId: data.__image_file_id });
+
+				try {
+					// 1. Download image from Telegram
+					const imageBytes = await this.downloadTelegramFile(data.__image_file_id as string);
+
+					// 2. Generate timestamp-based ID for image
+					const { generateTimestampId } = await import("@eventky/mod.ts");
+					const imageId = generateTimestampId();
+
+					// 3. Upload to Pubky
+					const imagePath = `/pub/eventky.app/images/${imageId}`;
+					const imageUri = await this.uploadBytes(imagePath, imageBytes);
+
+					if (imageUri) {
+						// 4. Add image_uri to event data
+						const eventData = data.__event_data as Record<string, unknown>;
+						eventData.image_uri = imageUri;
+						dataToWrite = eventData;
+
+						log.info("pubky.write.image_uploaded", {
+							id,
+							imageUri,
+							imagePath,
+							imageSize: imageBytes.length,
+						});
+					} else {
+						log.warn("pubky.write.image_upload_failed", { id });
+						// Continue without image
+						dataToWrite = data.__event_data;
+					}
+				} catch (imageErr) {
+					log.error("pubky.write.image_error", {
+						id,
+						error: (imageErr as Error).message,
+					});
+					// Continue without image
+					dataToWrite = data.__event_data;
+				}
+			}
+
+			await this.session.storage.putJson(pubPath, dataToWrite);
 
 			// Verify the write by reading it back
 			try {
@@ -266,6 +312,40 @@ class PubkyWriter {
 			log.error("pubky.upload.failed", { path, error: (err as Error).message });
 			return null;
 		}
+	}
+
+	/**
+	 * Download a file from Telegram by file_id.
+	 * Returns the file bytes.
+	 */
+	private async downloadTelegramFile(fileId: string): Promise<Uint8Array> {
+		const token = Deno.env.get("BOT_TOKEN");
+		if (!token) {
+			throw new Error("BOT_TOKEN not available for file download");
+		}
+
+		// Get file path from Telegram
+		const fileInfoUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`;
+		const fileInfoResponse = await fetch(fileInfoUrl);
+		const fileInfo = await fileInfoResponse.json() as {
+			ok: boolean;
+			result?: { file_path: string };
+		};
+
+		if (!fileInfo.ok || !fileInfo.result?.file_path) {
+			throw new Error("Failed to get file info from Telegram");
+		}
+
+		// Download file
+		const fileUrl = `https://api.telegram.org/file/bot${token}/${fileInfo.result.file_path}`;
+		const fileResponse = await fetch(fileUrl);
+
+		if (!fileResponse.ok) {
+			throw new Error(`Failed to download file: ${fileResponse.statusText}`);
+		}
+
+		const arrayBuffer = await fileResponse.arrayBuffer();
+		return new Uint8Array(arrayBuffer);
 	}
 
 	/**
