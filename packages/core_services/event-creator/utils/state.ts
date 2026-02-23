@@ -73,10 +73,10 @@ export function getFieldDisplayName(field: string): string {
 export function getEditPrompt(field: string): string {
 	const prompts: Record<string, string> = {
 		title: "Enter new title (1-100 characters):",
-		startDate: "Enter new date (YYYY-MM-DD):",
+		startDate: "Enter new date (DD.MM.YYYY):",
 		startTime: "Enter new time (HH:MM in 24h format):",
 		description: 'Enter new description (or type "clear" to remove):',
-		endDate: 'Enter end date (YYYY-MM-DD) or type "clear" to remove:',
+		endDate: 'Enter end date (DD.MM.YYYY) or type "clear" to remove:',
 		endTime: 'Enter end time (HH:MM) or type "clear" to remove:',
 		location: 'Enter location name or type "clear" to remove:',
 		imageFileId: 'Send a new photo or type "clear" to remove:',

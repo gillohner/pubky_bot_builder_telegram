@@ -216,24 +216,45 @@ class PubkyWriter {
 					// 1. Download image from Telegram
 					const imageBytes = await this.downloadTelegramFile(data.__image_file_id as string);
 
-					// 2. Generate timestamp-based ID for image
-					const { generateTimestampId } = await import("@eventky/mod.ts");
-					const imageId = generateTimestampId();
+					// 2. Compute SHA-256 content hash for blob ID (Crockford Base32)
+					const hashBuffer = await crypto.subtle.digest("SHA-256", new Uint8Array(imageBytes));
+					const hashBytes = new Uint8Array(hashBuffer).slice(0, 16);
+					const blobId = encodeCrockfordBase32(hashBytes);
 
-					// 3. Upload to Pubky
-					const imagePath = `/pub/eventky.app/images/${imageId}`;
-					const imageUri = await this.uploadBytes(imagePath, imageBytes);
+					// 3. Upload blob bytes to /pub/pubky.app/blobs/{blobId}
+					const { blobPathBuilder, filePathBuilder, generateTimestampId, getCurrentDtstamp } =
+						await import("@eventky/mod.ts");
+					const blobPath = blobPathBuilder(blobId);
+					const blobUri = await this.uploadBytes(blobPath, imageBytes);
 
-					if (imageUri) {
-						// 4. Add image_uri to event data
+					if (blobUri) {
+						// 4. Create PubkyAppFile metadata
+						const fileId = generateTimestampId();
+						const filePath = filePathBuilder(fileId);
+						const fileData = {
+							name: "event-image.jpg",
+							created_at: getCurrentDtstamp(),
+							src: blobUri,
+							content_type: "image/jpeg",
+							size: imageBytes.length,
+						};
+
+						// 5. Write file metadata to /pub/pubky.app/files/{fileId}
+						type PubPath = `/pub/${string}`;
+						await this.session!.storage.putJson(filePath as PubPath, fileData);
+						const fileUri = `pubky://${this.publicKey}${filePath}`;
+
+						// 6. Set image_uri on the event to the file URI
 						const eventData = data.__event_data as Record<string, unknown>;
-						eventData.image_uri = imageUri;
+						eventData.image_uri = fileUri;
 						dataToWrite = eventData;
 
 						log.info("pubky.write.image_uploaded", {
 							id,
-							imageUri,
-							imagePath,
+							blobUri,
+							fileUri,
+							blobPath,
+							filePath,
 							imageSize: imageBytes.length,
 						});
 					} else {
@@ -472,6 +493,21 @@ ${pending.preview}
 			return undefined;
 		}
 	}
+}
+
+// Crockford Base32 encoder for blob IDs
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+function encodeCrockfordBase32(bytes: Uint8Array): string {
+	if (bytes.length === 0) return "";
+	let bits = "";
+	for (const b of bytes) bits += b.toString(2).padStart(8, "0");
+	const pad = (5 - (bits.length % 5)) % 5;
+	bits += "0".repeat(pad);
+	let out = "";
+	for (let i = 0; i < bits.length; i += 5) {
+		out += CROCKFORD[parseInt(bits.slice(i, i + 5), 2)];
+	}
+	return out;
 }
 
 // Singleton instance

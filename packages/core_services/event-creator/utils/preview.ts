@@ -60,6 +60,16 @@ export function buildEventSummary(
 	state: EventCreatorState,
 	config: EventCreatorConfig,
 ): string {
+	const req = (field: string) => {
+		const map: Record<string, keyof EventCreatorConfig> = {
+			location: "requireLocation",
+			image: "requireImage",
+			endTime: "requireEndTime",
+		};
+		const key = map[field];
+		return key && config[key] ? " *" : "";
+	};
+
 	const lines: string[] = [
 		`📋 **Event Summary**\n`,
 		`📌 **Title:** ${state.title}`,
@@ -75,21 +85,21 @@ export function buildEventSummary(
 	}
 
 	if (state.endDate && state.endTime) {
-		lines.push(`⏱️ **End:** ${state.endDate} at ${state.endTime}`);
+		lines.push(`⏱️ **End${req("endTime")}:** ${state.endDate} at ${state.endTime}`);
 	} else {
-		lines.push(`⏱️ **End:** _(not set)_`);
+		lines.push(`⏱️ **End${req("endTime")}:** _(not set)_`);
 	}
 
 	if (state.location?.name) {
-		lines.push(`📍 **Location:** ${truncate(state.location.name, 50)}`);
+		lines.push(`📍 **Location${req("location")}:** ${truncate(state.location.name, 50)}`);
 	} else {
-		lines.push(`📍 **Location:** _(not set)_`);
+		lines.push(`📍 **Location${req("location")}:** _(not set)_`);
 	}
 
 	if (state.imageFileId) {
-		lines.push(`🖼️ **Image:** ✅ Attached`);
+		lines.push(`🖼️ **Image${req("image")}:** ✅ Attached`);
 	} else {
-		lines.push(`🖼️ **Image:** _(not set)_`);
+		lines.push(`🖼️ **Image${req("image")}:** _(not set)_`);
 	}
 
 	// Calendar status

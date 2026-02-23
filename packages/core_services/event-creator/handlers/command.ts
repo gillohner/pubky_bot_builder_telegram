@@ -1,29 +1,33 @@
 // packages/core_services/event-creator/handlers/command.ts
 // Command handler for starting the event creation flow
 
-import { reply, state, type CommandEvent } from "@sdk/mod.ts";
+import { type CommandEvent, reply, state } from "@sdk/mod.ts";
 import { REQ_STEP_TITLE } from "../constants.ts";
 import type { EventCreatorConfig } from "../types.ts";
-import { getDefaultCalendarUri, getCalendarName } from "../utils/calendar.ts";
+import { getCalendarName, getDefaultCalendarUri } from "../utils/calendar.ts";
 
 export function handleCommand(ev: CommandEvent) {
 	const config = ev.serviceConfig as EventCreatorConfig | undefined;
+	const calCount = config?.calendars?.length ?? 0;
 
-	// Display welcome message with default calendar name if configured
+	// Display welcome message with calendar info
 	const defaultUri = config ? getDefaultCalendarUri(config) : undefined;
-	const calendarInfo = defaultUri && config
-		? `\n📅 Default Calendar: ${getCalendarName(defaultUri, config)}`
-		: "";
+	const lines: string[] = ["🎉 **Create a New Event**\n"];
 
-	return reply(
-		`🎉 **Create a New Event**${calendarInfo}\n\n` +
-			"Let's create an event! I'll collect the essential details first.\n\n" +
-			`📝 **Step 1/3**: What's the event title? (1-${100} characters)`,
-		{
-			state: state.replace({
-				phase: "required",
-				requirementStep: REQ_STEP_TITLE,
-			}),
-		},
-	);
+	if (defaultUri && config) {
+		lines.push(`📅 Calendar: **${getCalendarName(defaultUri, config)}**`);
+		if (calCount > 1) {
+			lines.push(`   _(+${calCount - 1} more available)_`);
+		}
+		lines.push("");
+	}
+
+	lines.push(`📝 **Step 1/3**: What's the event title? (max ${100} characters)`);
+
+	return reply(lines.join("\n"), {
+		state: state.replace({
+			phase: "required",
+			requirementStep: REQ_STEP_TITLE,
+		}),
+	});
 }

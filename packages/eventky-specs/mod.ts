@@ -105,6 +105,30 @@ export function calendarUriBuilder(userId: string, calendarId: string): string {
 	return `pubky://${userId}/pub/eventky.app/calendars/${calendarId}`;
 }
 
+export function blobPathBuilder(blobId: string): string {
+	return `/pub/pubky.app/blobs/${blobId}`;
+}
+
+export function filePathBuilder(fileId: string): string {
+	return `/pub/pubky.app/files/${fileId}`;
+}
+
+export function blobUriBuilder(userId: string, blobId: string): string {
+	return `pubky://${userId}/pub/pubky.app/blobs/${blobId}`;
+}
+
+export function fileUriBuilder(userId: string, fileId: string): string {
+	return `pubky://${userId}/pub/pubky.app/files/${fileId}`;
+}
+
+export interface PubkyAppFile {
+	name: string;
+	created_at: number; // Unix microseconds
+	src: string; // pubky:// URI to the blob
+	content_type: string;
+	size: number;
+}
+
 // ============================================================================
 // ID GENERATION (Crockford Base32 on bytes)
 // ============================================================================

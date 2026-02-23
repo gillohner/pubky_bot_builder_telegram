@@ -22,7 +22,7 @@ export const REQ_STEP_DATE = 2;
 export const REQ_STEP_TIME = 3;
 
 // Validation patterns
-export const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+export const DATE_REGEX = /^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}$/;
 export const TIME_REGEX = /^\d{2}:\d{2}$/;
 
 // Field limits
@@ -48,7 +48,7 @@ export const EVENTKY_APP_BASE = "https://eventky.app";
 
 export interface CalendarOption {
 	uri: string;
-	name: string;
+	name?: string;
 	description?: string;
 	isDefault?: boolean;
 }
@@ -100,7 +100,7 @@ export const CALENDAR_OPTION_SCHEMA: JSONSchema = {
 			default: false,
 		},
 	},
-	required: ["uri", "name"],
+	required: ["uri"],
 };
 
 /**
@@ -126,7 +126,8 @@ export const EVENT_CREATOR_CONFIG_SCHEMA: JSONSchema = {
 		returnMessageTemplate: {
 			type: "string",
 			title: "Return Message Template",
-			description: "Message template shown after event is published. Supports {url}, {title}, {date}, {time} placeholders.",
+			description:
+				"Message template shown after event is published. Supports {url}, {title}, {date}, {time} placeholders.",
 			maxLength: 500,
 		},
 		requireLocation: {
@@ -184,20 +185,28 @@ export function validateCalendarOption(option: unknown, index: number): Validati
 	const o = option as Record<string, unknown>;
 
 	if (typeof o.uri !== "string" || o.uri.length === 0) {
-		errors.push({ path: `${prefix}.uri`, message: "URI is required and must be a non-empty string" });
+		errors.push({
+			path: `${prefix}.uri`,
+			message: "URI is required and must be a non-empty string",
+		});
 	}
 
-	if (typeof o.name !== "string" || o.name.length === 0) {
-		errors.push({ path: `${prefix}.name`, message: "Name is required and must be a non-empty string" });
-	} else if (o.name.length > 100) {
-		errors.push({ path: `${prefix}.name`, message: "Name must be 100 characters or less" });
+	if (o.name !== undefined) {
+		if (typeof o.name !== "string") {
+			errors.push({ path: `${prefix}.name`, message: "Name must be a string" });
+		} else if (o.name.length > 100) {
+			errors.push({ path: `${prefix}.name`, message: "Name must be 100 characters or less" });
+		}
 	}
 
 	if (o.description !== undefined) {
 		if (typeof o.description !== "string") {
 			errors.push({ path: `${prefix}.description`, message: "Description must be a string" });
 		} else if (o.description.length > 500) {
-			errors.push({ path: `${prefix}.description`, message: "Description must be 500 characters or less" });
+			errors.push({
+				path: `${prefix}.description`,
+				message: "Description must be 500 characters or less",
+			});
 		}
 	}
 
@@ -243,9 +252,15 @@ export function validateConfig(config: unknown): ValidationResult {
 	// returnMessageTemplate
 	if (c.returnMessageTemplate !== undefined) {
 		if (typeof c.returnMessageTemplate !== "string") {
-			errors.push({ path: "returnMessageTemplate", message: "returnMessageTemplate must be a string" });
+			errors.push({
+				path: "returnMessageTemplate",
+				message: "returnMessageTemplate must be a string",
+			});
 		} else if (c.returnMessageTemplate.length > 500) {
-			errors.push({ path: "returnMessageTemplate", message: "returnMessageTemplate must be 500 characters or less" });
+			errors.push({
+				path: "returnMessageTemplate",
+				message: "returnMessageTemplate must be 500 characters or less",
+			});
 		}
 	}
 

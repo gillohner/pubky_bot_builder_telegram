@@ -4,7 +4,13 @@
 import { type CallbackEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import { SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
-import { decodeCalendarId, encodeCalendarId, getSelectableCalendars } from "../utils/calendar.ts";
+import {
+	decodeCalendarId,
+	encodeCalendarId,
+	getCalendarName,
+	getDefaultCalendarUri,
+	getSelectableCalendars,
+} from "../utils/calendar.ts";
 
 export function handleCalendarMenu(ev: CallbackEvent) {
 	const st = (ev.state ?? {}) as EventCreatorState;
@@ -24,17 +30,32 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 		const isSelected = selected.includes(cal.uri);
 		const icon = isSelected ? "✅" : "☐";
 		const calId = encodeCalendarId(cal.uri);
+		const name = getCalendarName(cal.uri, config);
 		keyboard.callback(
-			`${icon} ${cal.name}`,
+			`${icon} ${name}`,
 			`calendar:toggle:${calId}`,
 		).row();
 	}
 
 	keyboard.callback("← Back to Menu", "calendar:back");
 
+	// Build description lines for calendars that have one
+	const descLines: string[] = [];
+	const defaultUri = getDefaultCalendarUri(config);
+	if (defaultUri) {
+		const defaultName = getCalendarName(defaultUri, config);
+		descLines.push(`📌 Default: **${defaultName}** _(always included)_`);
+	}
+	for (const cal of selectableCalendars) {
+		if (cal.description) {
+			const name = getCalendarName(cal.uri, config);
+			descLines.push(`  • ${name}: ${cal.description}`);
+		}
+	}
+
 	const message = `📅 **Select Additional Calendars**\n\n` +
-		`Tap to toggle calendar selection. Selected calendars will receive this event.\n\n` +
-		`Currently selected: ${selected.length}`;
+		(descLines.length > 0 ? descLines.join("\n") + "\n\n" : "") +
+		`Tap to toggle. Selected: ${selected.length}`;
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),

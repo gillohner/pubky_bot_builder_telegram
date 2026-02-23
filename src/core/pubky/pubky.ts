@@ -331,7 +331,8 @@ export async function fetchPubkyConfig(url: string): Promise<PubkyBotConfigTempl
 				const first = arr[0];
 				if (typeof first !== "object" || first === null) return false;
 				const entry = first as Record<string, unknown>;
-				return typeof entry.serviceConfigRef === "string" || typeof entry.serviceConfigUri === "string";
+				return typeof entry.serviceConfigRef === "string" ||
+					typeof entry.serviceConfigUri === "string";
 			};
 
 			if (hasModularFormat(services) || hasModularFormat(listeners)) {
@@ -547,7 +548,9 @@ async function resolveServiceRef(
 			resolvedName = serviceConfig.name || registryEntry.name;
 			resolvedVersion = registryEntry.source.version;
 			resolvedCommand = serviceConfig.command;
-		} else if (serviceConfig.kind && serviceConfig.source && typeof serviceConfig.source === "object") {
+		} else if (
+			serviceConfig.kind && serviceConfig.source && typeof serviceConfig.source === "object"
+		) {
 			// B) Inline resolution with structured source
 			resolvedKind = serviceConfig.kind;
 			resolvedSource = serviceConfig.source;
@@ -586,6 +589,33 @@ async function resolveServiceRef(
 		}
 	}
 
+	// Enrich calendar metadata by fetching from homeserver if names are missing
+	const mergedConfig = {
+		...(rawConfig.config as Record<string, unknown> | undefined),
+		...serviceRef.overrides?.config,
+	};
+	if (Array.isArray(mergedConfig.calendars)) {
+		const calendars = mergedConfig.calendars as Record<string, unknown>[];
+		for (const cal of calendars) {
+			if (typeof cal.uri === "string" && !cal.name) {
+				try {
+					const calResponse = await client.fetch(cal.uri as string);
+					if (calResponse.ok) {
+						const calData = await calResponse.json() as Record<string, unknown>;
+						if (typeof calData.name === "string") {
+							cal.name = calData.name;
+						}
+						if (typeof calData.description === "string" && !cal.description) {
+							cal.description = calData.description;
+						}
+					}
+				} catch {
+					// Calendar fetch failed — name stays empty, will use URI fallback
+				}
+			}
+		}
+	}
+
 	// Build the resolved service spec
 	const entry = determineServiceEntry({
 		id: (rawConfig.manifest as Record<string, unknown>)?.serviceId as string ||
@@ -600,7 +630,9 @@ async function resolveServiceRef(
 	// Command is required for single_command and command_flow, but not for listeners
 	const command = serviceRef.overrides?.command || resolvedCommand;
 	if (!command && resolvedKind !== "listener") {
-		throw new Error(`Service config missing required 'command' field: ${serviceRef.serviceConfigRef}`);
+		throw new Error(
+			`Service config missing required 'command' field: ${serviceRef.serviceConfigRef}`,
+		);
 	}
 
 	const config: Record<string, unknown> = {
@@ -611,7 +643,7 @@ async function resolveServiceRef(
 
 	// Filter out undefined values
 	const filteredConfig = Object.fromEntries(
-		Object.entries(config).filter(([, v]) => v !== undefined)
+		Object.entries(config).filter(([, v]) => v !== undefined),
 	);
 
 	// Extract serviceId from config manifest (the web configurator stores it there)

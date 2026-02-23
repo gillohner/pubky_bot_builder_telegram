@@ -19,7 +19,8 @@ const service = defineService({
 	id: EVENT_CREATOR_SERVICE_ID,
 	version: EVENT_CREATOR_VERSION,
 	kind: SERVICE_KIND,
-	description: "Creates events on Pubky with admin approval, image uploads, and multi-calendar support",
+	description:
+		"Creates events on Pubky with admin approval, image uploads, and multi-calendar support",
 	configSchema: EVENT_CREATOR_CONFIG_SCHEMA,
 	datasetSchemas: EVENT_CREATOR_DATASET_SCHEMAS,
 

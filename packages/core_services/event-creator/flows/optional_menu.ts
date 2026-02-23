@@ -1,7 +1,14 @@
 // packages/core_services/event-creator/flows/optional_menu.ts
 // Optional menu display and field addition handlers
 
-import { type CallbackEvent, type MessageEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
+import {
+	type CallbackEvent,
+	type MessageEvent,
+	reply,
+	state,
+	UIBuilder,
+	uiKeyboard,
+} from "@sdk/mod.ts";
 import { SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
@@ -11,15 +18,25 @@ import { validateDescription, validateLocationName } from "../utils/validation.t
 export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | MessageEvent) {
 	const config = (ev.serviceConfig ?? {}) as EventCreatorConfig;
 
+	const reqMark = (field: string) => {
+		const map: Record<string, keyof typeof config> = {
+			location: "requireLocation",
+			image: "requireImage",
+			endtime: "requireEndTime",
+		};
+		const key = map[field];
+		return key && config[key] ? " *" : "";
+	};
+
 	const keyboard = UIBuilder.keyboard()
 		.namespace(SERVICE_ID)
-		.callback("📝 Add/Edit Description", "menu:description")
+		.callback(`📝 Add/Edit Description`, "menu:description")
 		.row()
-		.callback("🖼️ Add/Edit Image", "menu:image")
+		.callback(`🖼️ Add/Edit Image${reqMark("image")}`, "menu:image")
 		.row()
-		.callback("📍 Add/Edit Location", "menu:location")
+		.callback(`📍 Add/Edit Location${reqMark("location")}`, "menu:location")
 		.row()
-		.callback("⏰ Add/Edit End Time", "menu:endtime")
+		.callback(`⏰ Add/Edit End Time${reqMark("endtime")}`, "menu:endtime")
 		.row();
 
 	// Show calendar selector only if multiple calendars configured
@@ -50,7 +67,7 @@ export function handleOptionalMenuAction(
 	switch (action) {
 		case "description":
 			return reply(
-				'📝 **Add Description**\n\n' +
+				"📝 **Add Description**\n\n" +
 					'Enter a description for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "description" }),
@@ -59,7 +76,7 @@ export function handleOptionalMenuAction(
 
 		case "image":
 			return reply(
-				'🖼️ **Add Image**\n\n' +
+				"🖼️ **Add Image**\n\n" +
 					'Send a photo for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "image" }),
@@ -68,7 +85,7 @@ export function handleOptionalMenuAction(
 
 		case "location":
 			return reply(
-				'📍 **Add Location**\n\n' +
+				"📍 **Add Location**\n\n" +
 					'Enter the location name or address (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "location" }),
@@ -77,8 +94,8 @@ export function handleOptionalMenuAction(
 
 		case "endtime":
 			return reply(
-				'⏰ **Add End Time**\n\n' +
-					'First, enter the end date (YYYY-MM-DD) or type "skip" to cancel:',
+				"⏰ **Add End Time**\n\n" +
+					'First, enter the end date (DD.MM.YYYY) or type "skip" to cancel:',
 				{
 					state: state.merge({ waitingFor: "endDate" }),
 				},
@@ -177,18 +194,20 @@ function handleLocationInput(text: string, st: EventCreatorState, ev: MessageEve
 
 async function handleEndDateInput(text: string, _st: EventCreatorState, _ev: MessageEvent) {
 	// Import validation here to avoid circular deps
-	const { validateDate } = await import("../utils/validation.ts");
+	const { normalizeDate, validateDate } = await import("../utils/validation.ts");
 	const validation = validateDate(text);
 	if (!validation.valid) {
 		return reply(validation.error!);
 	}
 
+	const normalized = normalizeDate(text) ?? text;
+
 	return reply(
-		`✅ End date: **${text}**\n\n` +
+		`✅ End date: **${normalized}**\n\n` +
 			`Now enter the end time (HH:MM):`,
 		{
 			state: state.merge({
-				endDate: text,
+				endDate: normalized,
 				waitingFor: "endTime",
 			}),
 		},

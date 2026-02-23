@@ -50,7 +50,7 @@ export function getCalendarName(uri: string, config: EventCreatorConfig): string
 	// Check in calendars array
 	if (config.calendars) {
 		const cal = config.calendars.find((c) => c.uri === uri);
-		if (cal) return cal.name;
+		if (cal?.name) return cal.name;
 	}
 
 	// Fallback to extracting ID from URI

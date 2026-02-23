@@ -1,11 +1,19 @@
 // packages/core_services/event-creator/flows/edit.ts
 // Field editing handlers
 
-import { type CallbackEvent, type MessageEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
+import {
+	type CallbackEvent,
+	type MessageEvent,
+	reply,
+	state,
+	UIBuilder,
+	uiKeyboard,
+} from "@sdk/mod.ts";
 import { SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
 import { getEditPrompt, isFieldClearable } from "../utils/state.ts";
 import {
+	normalizeDate,
 	validateDate,
 	validateDescription,
 	validateLocationName,
@@ -27,10 +35,12 @@ export function handleEditMenu(ev: CallbackEvent) {
 		.row();
 
 	if (st.description) {
-		keyboard.callback(`📝 Description: ${st.description.substring(0, 20)}...`, "edit:description").row();
+		keyboard.callback(`📝 Description: ${st.description.substring(0, 20)}...`, "edit:description")
+			.row();
 	}
 	if (st.location?.name) {
-		keyboard.callback(`📍 Location: ${st.location.name.substring(0, 20)}...`, "edit:location").row();
+		keyboard.callback(`📍 Location: ${st.location.name.substring(0, 20)}...`, "edit:location")
+			.row();
 	}
 	if (st.endDate && st.endTime) {
 		keyboard.callback(`⏱️ End: ${st.endDate} ${st.endTime}`, "edit:endTime").row();
@@ -122,7 +132,7 @@ async function validateAndUpdateField(
 
 		case "startDate":
 			validation = validateDate(text);
-			if (validation.valid) updatedState.startDate = text;
+			if (validation.valid) updatedState.startDate = normalizeDate(text) ?? text;
 			break;
 
 		case "startTime":
@@ -143,15 +153,16 @@ async function validateAndUpdateField(
 		case "endDate":
 			validation = validateDate(text);
 			if (validation.valid) {
-				updatedState.endDate = text;
+				const normalizedEnd = normalizeDate(text) ?? text;
+				updatedState.endDate = normalizedEnd;
 				// Prompt for endTime if not set
 				if (!st.endTime) {
 					return reply(
-						`✅ End date: **${text}**\n\n` +
+						`✅ End date: **${normalizedEnd}**\n\n` +
 							`Now enter the end time (HH:MM):`,
 						{
 							state: state.merge({
-								endDate: text,
+								endDate: normalizedEnd,
 								editingField: "endTime",
 							}),
 						},

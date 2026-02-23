@@ -14,7 +14,7 @@ export interface EventCreatorState {
 
 	// Required fields
 	title?: string;
-	startDate?: string; // YYYY-MM-DD
+	startDate?: string; // DD.MM.YYYY
 	startTime?: string; // HH:MM
 
 	// Optional fields

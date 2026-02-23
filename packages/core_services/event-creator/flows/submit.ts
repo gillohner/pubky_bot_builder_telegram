@@ -30,9 +30,7 @@ export function handleSubmit(ev: CallbackEvent) {
 	const dtstart = formatDateTime(st.startDate!, st.startTime!);
 
 	// Build dtend if provided
-	const dtend = st.endDate && st.endTime
-		? formatDateTime(st.endDate, st.endTime)
-		: undefined;
+	const dtend = st.endDate && st.endTime ? formatDateTime(st.endDate, st.endTime) : undefined;
 
 	// Build locations array if location provided
 	const locations: Location[] | undefined = st.location?.name

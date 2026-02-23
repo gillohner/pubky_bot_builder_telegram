@@ -4,7 +4,7 @@
 import { type MessageEvent, reply, state } from "@sdk/mod.ts";
 import { REQ_STEP_DATE, REQ_STEP_TIME, REQ_STEP_TITLE } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
-import { validateDate, validateTime, validateTitle } from "../utils/validation.ts";
+import { normalizeDate, validateDate, validateTime, validateTitle } from "../utils/validation.ts";
 import { showOptionalMenu } from "./optional_menu.ts";
 
 export function handleRequiredFieldInput(ev: MessageEvent) {
@@ -37,8 +37,8 @@ function handleTitleInput(text: string, _st: EventCreatorState) {
 
 	return reply(
 		`✅ Title: **${text}**\n\n` +
-			`📝 **Step 2/3**: When is the event? (YYYY-MM-DD)\n\n` +
-			`Example: 2026-04-15`,
+			`📝 **Step 2/3**: When is the event? (DD.MM.YYYY)\n\n` +
+			`Example: 23.04.2026`,
 		{
 			state: state.merge({
 				requirementStep: REQ_STEP_DATE,
@@ -54,14 +54,16 @@ function handleDateInput(text: string, _st: EventCreatorState) {
 		return reply(validation.error!);
 	}
 
+	const normalized = normalizeDate(text) ?? text;
+
 	return reply(
-		`✅ Date: **${text}**\n\n` +
+		`✅ Date: **${normalized}**\n\n` +
 			`📝 **Step 3/3**: What time? (HH:MM in 24h format)\n\n` +
 			`Example: 19:30`,
 		{
 			state: state.merge({
 				requirementStep: REQ_STEP_TIME,
-				startDate: text,
+				startDate: normalized,
 			}),
 		},
 	);
