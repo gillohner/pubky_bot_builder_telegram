@@ -54,9 +54,7 @@ export interface CalendarOption {
 }
 
 export interface EventCreatorConfig {
-	calendarUri?: string;
 	calendars?: CalendarOption[];
-	defaultCalendar?: string;
 	defaultTimezone?: string;
 	returnMessageTemplate?: string;
 	requireLocation?: boolean;
@@ -113,24 +111,12 @@ export const EVENT_CREATOR_CONFIG_SCHEMA: JSONSchema = {
 	title: "Event Creator Configuration",
 	description: "Configuration options for the event creator service",
 	properties: {
-		calendarUri: {
-			type: "string",
-			title: "Calendar URI (Legacy)",
-			description: "Single calendar URI for legacy mode. Use 'calendars' array for multi-calendar support.",
-			format: "uri",
-		},
 		calendars: {
 			type: "array",
 			title: "Calendars",
-			description: "List of calendars that events can be published to (multi-calendar mode)",
+			description: "List of calendars that events can be published to",
 			items: CALENDAR_OPTION_SCHEMA,
 			minItems: 0,
-		},
-		defaultCalendar: {
-			type: "string",
-			title: "Default Calendar URI",
-			description: "URI of the default calendar (fallback if no calendar is marked as default)",
-			format: "uri",
 		},
 		defaultTimezone: {
 			type: "string",
@@ -238,11 +224,6 @@ export function validateConfig(config: unknown): ValidationResult {
 
 	const c = config as Record<string, unknown>;
 
-	// calendarUri
-	if (c.calendarUri !== undefined && typeof c.calendarUri !== "string") {
-		errors.push({ path: "calendarUri", message: "calendarUri must be a string" });
-	}
-
 	// calendars
 	if (c.calendars !== undefined) {
 		if (!Array.isArray(c.calendars)) {
@@ -252,11 +233,6 @@ export function validateConfig(config: unknown): ValidationResult {
 				errors.push(...validateCalendarOption(c.calendars[i], i));
 			}
 		}
-	}
-
-	// defaultCalendar
-	if (c.defaultCalendar !== undefined && typeof c.defaultCalendar !== "string") {
-		errors.push({ path: "defaultCalendar", message: "defaultCalendar must be a string" });
 	}
 
 	// defaultTimezone

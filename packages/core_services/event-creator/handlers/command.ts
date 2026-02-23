@@ -4,13 +4,15 @@
 import { reply, state, type CommandEvent } from "@sdk/mod.ts";
 import { REQ_STEP_TITLE } from "../constants.ts";
 import type { EventCreatorConfig } from "../types.ts";
+import { getDefaultCalendarUri, getCalendarName } from "../utils/calendar.ts";
 
 export function handleCommand(ev: CommandEvent) {
 	const config = ev.serviceConfig as EventCreatorConfig | undefined;
 
-	// Display welcome message
-	const calendarInfo = config?.calendarUri || config?.defaultCalendar
-		? `\n📅 Default Calendar: ${(config.calendarUri || config.defaultCalendar)?.split("/").pop()}`
+	// Display welcome message with default calendar name if configured
+	const defaultUri = config ? getDefaultCalendarUri(config) : undefined;
+	const calendarInfo = defaultUri && config
+		? `\n📅 Default Calendar: ${getCalendarName(defaultUri, config)}`
 		: "";
 
 	return reply(

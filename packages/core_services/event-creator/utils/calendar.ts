@@ -5,25 +5,18 @@ import type { CalendarOption, EventCreatorConfig, EventCreatorState } from "../t
 
 /**
  * Get the default calendar URI from config
- * Returns legacy calendarUri or the calendar marked as default in calendars array
+ * Returns the calendar marked as default, or the first calendar in the array
  */
 export function getDefaultCalendarUri(config: EventCreatorConfig): string | undefined {
-	// Legacy single calendar mode
-	if (config.calendarUri) {
-		return config.calendarUri;
+	if (!config.calendars || config.calendars.length === 0) {
+		return undefined;
 	}
 
-	// New multi-calendar mode - find default
-	if (config.calendars && config.calendars.length > 0) {
-		const defaultCal = config.calendars.find((c) => c.isDefault);
-		if (defaultCal) return defaultCal.uri;
+	const defaultCal = config.calendars.find((c) => c.isDefault);
+	if (defaultCal) return defaultCal.uri;
 
-		// If no explicit default, use first calendar
-		return config.calendars[0].uri;
-	}
-
-	// Explicit defaultCalendar fallback
-	return config.defaultCalendar;
+	// If no explicit default, use first calendar
+	return config.calendars[0].uri;
 }
 
 /**
