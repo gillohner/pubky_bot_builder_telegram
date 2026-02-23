@@ -88,20 +88,21 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 	if (importPath.startsWith("./") || importPath.startsWith("../")) {
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));
-		let resolved = `${baseDir}/${importPath}`;
-		// Normalize .. segments while preserving leading ./
-		if (resolved.includes("..")) {
-			const parts = resolved.split("/");
-			const normalized: string[] = [];
-			for (const part of parts) {
-				if (part === "..") {
-					normalized.pop();
-				} else {
-					normalized.push(part);
-				}
+		const raw = `${baseDir}/${importPath}`;
+		// Normalize path: resolve . and .. segments, preserve leading ./
+		const parts = raw.split("/");
+		const normalized: string[] = [];
+		for (let i = 0; i < parts.length; i++) {
+			const part = parts[i];
+			if (part === "..") {
+				normalized.pop();
+			} else if (part === "." && i > 0) {
+				// Skip mid-path . segments, keep leading . (preserves ./ prefix)
+			} else {
+				normalized.push(part);
 			}
-			resolved = normalized.join("/");
 		}
+		let resolved = normalized.join("/");
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
 	}
@@ -376,14 +377,14 @@ export async function bundleService(
 			// Collapse multiple blank lines introduced by removals for neatness.
 			finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
 
-			// Encode as data URL
-			const enc = new TextEncoder().encode(finalCode);
-			let binary = "";
-			for (const b of enc) binary += String.fromCharCode(b);
-			const url = `data:application/typescript;base64,${btoa(binary)}`;
+			// Write to temp file (data URLs hit OS argument length limits for large bundles)
+			const bundleDir = await getNpmBundleDir();
+			const hash = await simpleHash(servicePath + sdkSig);
+			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
+			await Deno.writeTextFile(tempFilePath, finalCode);
 
-			cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false });
-			return { entry: url, code: finalCode, hasNpm: false };
+			cache.set(cacheKey, { url: tempFilePath, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false, tempFilePath });
+			return { entry: tempFilePath, code: finalCode, hasNpm: false };
 		}
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });

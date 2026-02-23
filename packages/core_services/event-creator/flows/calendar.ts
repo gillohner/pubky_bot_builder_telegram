@@ -36,8 +36,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 		`Tap to toggle calendar selection. Selected calendars will receive this event.\n\n` +
 		`Currently selected: ${selected.length}`;
 
-	return reply(message, {
-		...uiKeyboard(keyboard.build(), message),
+	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
 	});
 }

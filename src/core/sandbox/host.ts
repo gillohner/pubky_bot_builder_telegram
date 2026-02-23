@@ -43,14 +43,13 @@ export class SandboxHost {
 			"--no-remote", // deny fetching remote modules (dynamic import of URLs will fail)
 		];
 
-		// If the service uses npm packages, we need to allow reading from the Deno cache
-		// and the temp bundle file. This is safe because:
-		// 1. The packages were pre-vetted against the allowlist
-		// 2. The temp file was created by the bundler
+		// Allow reading from /tmp where bundled service files are stored.
+		// If the service uses npm packages, also allow reading from Deno cache.
 		if (caps.hasNpm) {
 			const cacheDir = getDenoCacheDir();
-			// Allow reading from cache dir (for npm packages) and /tmp (for bundle file)
 			args.push(`--allow-read=${cacheDir},/tmp`);
+		} else {
+			args.push("--allow-read=/tmp");
 		}
 
 		args.push(entry);

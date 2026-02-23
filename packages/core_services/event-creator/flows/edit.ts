@@ -43,8 +43,7 @@ export function handleEditMenu(ev: CallbackEvent) {
 
 	const message = `✏️ **Edit Fields**\n\nSelect a field to edit:`;
 
-	return reply(message, {
-		...uiKeyboard(keyboard.build(), message),
+	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
 	});
 }

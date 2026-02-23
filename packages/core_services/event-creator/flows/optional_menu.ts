@@ -36,8 +36,7 @@ export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | Mess
 	const summary = buildEventSummary(st, config);
 	const message = `${summary}\n\n**What would you like to do?**`;
 
-	return reply(message, {
-		...uiKeyboard(keyboard.build(), message),
+	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
 	});
 }

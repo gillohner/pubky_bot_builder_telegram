@@ -129,18 +129,15 @@ export async function buildSnapshot(
 			async (code) => await sha256Hex(code),
 		)
 	));
-	// Persist bundles if not present.
+	// Persist or update bundles (entry path may change even if code hash is stable).
 	for (const b of built) {
-		const existing = getServiceBundle(b.bundleHash);
-		if (!existing) {
-			saveServiceBundle({
-				bundle_hash: b.bundleHash,
-				data_url: b.entry, // entry is either data URL or file path
-				code: b.code,
-				created_at: Date.now(),
-				has_npm: b.hasNpm ? 1 : 0,
-			});
-		}
+		saveServiceBundle({
+			bundle_hash: b.bundleHash,
+			data_url: b.entry,
+			code: b.code,
+			created_at: Date.now(),
+			has_npm: b.hasNpm ? 1 : 0,
+		});
 	}
 	const commandRoutes: Record<string, CommandRoute> = {};
 	let idx = 0;
@@ -232,14 +229,18 @@ export async function buildSnapshot(
 			}
 		}
 		const datasets = Object.keys(datasetsLocal).length ? datasetsLocal : undefined;
+		// Prefer explicit serviceId from config; fall back to loadMeta extraction.
+		// loadMeta returns id=command when dynamic import fails, so config-provided
+		// serviceId ensures callback routing works even when loadMeta can't import the module.
+		const serviceId = svc.serviceId || meta.id;
+		const routeMeta = serviceId !== meta.id ? { ...meta, id: serviceId } : meta;
 		commandRoutes[svc.command] = {
-			serviceId: meta.id,
+			serviceId,
 			kind: svc.kind === "command_flow" ? "command_flow" : "single_command",
 			bundleHash: bundle.bundleHash,
 			config: svc.config,
-			meta,
+			meta: routeMeta,
 			datasets,
-			// datasets placeholder (future resolution): service-level datasets can be attached here
 		};
 	}
 	const listenerRoutes: ListenerRoute[] = [];
@@ -271,12 +272,14 @@ export async function buildSnapshot(
 			}
 		}
 		const listenerDatasets = Object.keys(listenerDatasetsLocal).length ? listenerDatasetsLocal : undefined;
+		const listenerServiceId = l.serviceId || meta.id;
+		const listenerRouteMeta = listenerServiceId !== meta.id ? { ...meta, id: listenerServiceId } : meta;
 		listenerRoutes.push({
-			serviceId: meta.id,
+			serviceId: listenerServiceId,
 			kind: "listener",
 			bundleHash: bundle.bundleHash,
 			config: l.config,
-			meta,
+			meta: listenerRouteMeta,
 			datasets: listenerDatasets,
 		});
 	}
@@ -299,6 +302,7 @@ export async function buildSnapshot(
 		commands: Object.keys(snapshot.commands).length,
 		listeners: snapshot.listeners.length,
 		configId,
+		routes: Object.entries(snapshot.commands).map(([cmd, r]: [string, CommandRoute]) => `${cmd}→${r.serviceId}(${r.kind})`),
 	});
 	return snapshot;
 }

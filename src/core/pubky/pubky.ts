@@ -62,6 +62,8 @@ export interface PubkyServiceSpec {
 	version?: string;
 	source?: string;
 	config?: Record<string, unknown>;
+	/** Explicit service ID from config; used as fallback when loadMeta fails */
+	serviceId?: string;
 }
 
 export interface PubkyBotConfigTemplate {
@@ -129,6 +131,7 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				command: "newevent",
 				kind: "command_flow",
 				entry: "./packages/core_services/event-creator/service.ts",
+				serviceId: "event_creator",
 				config: {
 					// calendarUri: "pubky://your-pk/pub/eventky.app/calendars/your-calendar-id",
 					defaultTimezone: "UTC",
@@ -611,6 +614,10 @@ async function resolveServiceRef(
 		Object.entries(config).filter(([, v]) => v !== undefined)
 	);
 
+	// Extract serviceId from config manifest (the web configurator stores it there)
+	const serviceId = (rawConfig.manifest as Record<string, unknown>)?.serviceId as string ||
+		undefined;
+
 	return {
 		name: resolvedName,
 		command: command || resolvedName.toLowerCase().replace(/\s+/g, "_"), // Fallback for listeners
@@ -619,6 +626,7 @@ async function resolveServiceRef(
 		version: resolvedVersion,
 		source: `${resolvedSource.type}:${resolvedSource.location}`,
 		config: Object.keys(filteredConfig).length > 0 ? filteredConfig : undefined,
+		serviceId,
 	};
 }
 
