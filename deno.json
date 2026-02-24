@@ -9,7 +9,8 @@
 		"@eventky/": "./packages/eventky-specs/",
 		"sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts",
 		"@synonymdev/pubky": "npm:@synonymdev/pubky@0.6.0",
-		"zod": "npm:zod@3.23.8"
+		"zod": "npm:zod@3.23.8",
+		"@noble/hashes/blake3": "npm:@noble/hashes@1.7.1/blake3"
 	},
 	"tasks": {
 		"dev": "deno run --watch --allow-net --allow-env --allow-run --allow-read=./packages,./src,./secrets,./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,$HOME/.cache/deno,$HOME/Library/Caches/deno,/tmp --allow-write=./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,/tmp --allow-import=deno.land,cdn.skypack.dev,jsr.io,registry.npmjs.org,cdn.npmjs.org --env-file=.env.local src/main.ts",

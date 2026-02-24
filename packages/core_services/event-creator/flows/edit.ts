@@ -16,6 +16,7 @@ import {
 	normalizeDate,
 	validateDate,
 	validateDescription,
+	validateEndTime,
 	validateLocationName,
 	validateTime,
 	validateTitle,
@@ -115,7 +116,7 @@ export function handleEditFieldInput(ev: MessageEvent) {
 	return validateAndUpdateField(field, text, st, ev);
 }
 
-async function validateAndUpdateField(
+function validateAndUpdateField(
 	field: string,
 	text: string,
 	st: EventCreatorState,
@@ -175,7 +176,6 @@ async function validateAndUpdateField(
 			validation = validateTime(text);
 			if (validation.valid) {
 				// Also validate end is after start
-				const { validateEndTime } = await import("../utils/validation.ts");
 				const endValidation = validateEndTime(
 					st.startDate!,
 					st.startTime!,

@@ -2,6 +2,7 @@
 // PubkyWriter: handles writing data to Pubky homeservers with admin approval flow.
 
 import { log } from "@core/util/logger.ts";
+import { blake3 } from "@noble/hashes/blake3";
 import {
 	getExpiredPendingWrites,
 	getPendingWrite,
@@ -225,9 +226,10 @@ class PubkyWriter {
 					// 1. Download image from Telegram
 					const imageBytes = await this.downloadTelegramFile(data.__image_file_id as string);
 
-					// 2. Compute SHA-256 content hash for blob ID (Crockford Base32)
-					const hashBuffer = await crypto.subtle.digest("SHA-256", new Uint8Array(imageBytes));
-					const hashBytes = new Uint8Array(hashBuffer).slice(0, 16);
+					// 2. Compute BLAKE3 content hash for blob ID (Crockford Base32)
+					// pubky-app-specs requires: BLAKE3(content) → first 16 bytes → Crockford Base32
+					const hash = blake3(new Uint8Array(imageBytes));
+					const hashBytes = hash.slice(0, 16);
 					const blobId = encodeCrockfordBase32(hashBytes);
 
 					// 3. Upload blob bytes to /pub/pubky.app/blobs/{blobId}
@@ -281,6 +283,16 @@ class PubkyWriter {
 				}
 			}
 
+			// Log the data being written for debugging calendar URIs
+			const writeObj = dataToWrite as Record<string, unknown>;
+			log.info("pubky.write.data_to_write", {
+				id,
+				path: pubPath,
+				hasCalendarUris: !!writeObj.x_pubky_calendar_uris,
+				calendarUris: writeObj.x_pubky_calendar_uris,
+				dataKeys: Object.keys(writeObj),
+			});
+
 			await this.session.storage.putJson(pubPath, dataToWrite);
 
 			// Verify the write by reading it back
@@ -307,7 +319,9 @@ class PubkyWriter {
 			// Notify user if service requested it (via onApprovalMessage)
 			if (pending.onApproval && this.botApi) {
 				try {
-					await this.botApi.sendMessage(pending.onApproval.chatId, pending.onApproval.message);
+					await this.botApi.sendMessage(pending.onApproval.chatId, pending.onApproval.message, {
+						parse_mode: "Markdown",
+					});
 				} catch (notifyErr) {
 					log.warn("pubky.write.notify_failed", { error: (notifyErr as Error).message });
 				}

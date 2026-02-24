@@ -13,7 +13,7 @@ import { MENU_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
 import { buildEventSummary } from "../utils/preview.ts";
-import { validateDescription, validateLocationName } from "../utils/validation.ts";
+import { normalizeDate, validateDate, validateDescription, validateEndTime, validateLocationName, validateTime } from "../utils/validation.ts";
 import { handleLocationSearchInput, handleOnlineUrlInput, showLocationTypeMenu } from "./location.ts";
 
 export function showOptionalMenu(
@@ -201,9 +201,7 @@ function handleLocationInput(text: string, st: EventCreatorState, ev: MessageEve
 	return showOptionalMenu(updatedState, ev);
 }
 
-async function handleEndDateInput(text: string, _st: EventCreatorState, _ev: MessageEvent) {
-	// Import validation here to avoid circular deps
-	const { normalizeDate, validateDate } = await import("../utils/validation.ts");
+function handleEndDateInput(text: string, _st: EventCreatorState, _ev: MessageEvent) {
 	const validation = validateDate(text);
 	if (!validation.valid) {
 		return reply(validation.error!);
@@ -223,9 +221,7 @@ async function handleEndDateInput(text: string, _st: EventCreatorState, _ev: Mes
 	);
 }
 
-async function handleEndTimeInput(text: string, st: EventCreatorState, ev: MessageEvent) {
-	const { validateTime, validateEndTime } = await import("../utils/validation.ts");
-
+function handleEndTimeInput(text: string, st: EventCreatorState, ev: MessageEvent) {
 	const timeValidation = validateTime(text);
 	if (!timeValidation.valid) {
 		return reply(timeValidation.error!);

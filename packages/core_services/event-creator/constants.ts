@@ -104,7 +104,7 @@ export const CALENDAR_OPTION_SCHEMA: JSONSchema = {
 			default: false,
 		},
 	},
-	required: ["uri"],
+	required: ["uri", "name"],
 };
 
 /**
