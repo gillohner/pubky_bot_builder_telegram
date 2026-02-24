@@ -14,6 +14,8 @@ export interface ServiceContext {
 	routeMeta?: { id: string; command: string; description?: string };
 	/** Resolved dataset objects (JSON) keyed by dataset name. */
 	datasets?: Record<string, unknown>;
+	/** Bot's public key (Pubky identity), injected by host. */
+	botPublicKey?: string;
 }
 
 export type CommandEvent = { type: "command" } & ServiceContext;

@@ -24,6 +24,7 @@ interface RawPayload {
 		serviceConfig?: Record<string, unknown>;
 		routeMeta?: { id: string; command: string; description?: string };
 		datasets?: Record<string, unknown>;
+		botPublicKey?: string;
 	};
 }
 
@@ -96,6 +97,7 @@ export async function runService(svc: DefinedService) {
 		stateVersion: evtAny.stateVersion,
 		routeMeta,
 		datasets: payload.ctx?.datasets,
+		botPublicKey: payload.ctx?.botPublicKey,
 	};
 	let resp;
 	try {

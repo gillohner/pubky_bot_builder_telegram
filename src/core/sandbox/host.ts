@@ -7,7 +7,7 @@ function getDenoCacheDir(): string {
 	// Check DENO_DIR env first, then default locations
 	const denoDir = Deno.env.get("DENO_DIR");
 	if (denoDir) return denoDir;
-
+	
 	// Default cache locations by OS
 	const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
 	if (Deno.build.os === "darwin") {
@@ -42,16 +42,17 @@ export class SandboxHost {
 			"--quiet",
 			"--no-remote", // deny fetching remote modules (dynamic import of URLs will fail)
 		];
-
-		// Allow reading from /tmp where bundled service files are stored.
-		// If the service uses npm packages, also allow reading from Deno cache.
+		
+		// If the service uses npm packages, we need to allow reading from the Deno cache
+		// and the temp bundle file. This is safe because:
+		// 1. The packages were pre-vetted against the allowlist
+		// 2. The temp file was created by the bundler
 		if (caps.hasNpm) {
 			const cacheDir = getDenoCacheDir();
+			// Allow reading from cache dir (for npm packages) and /tmp (for bundle file)
 			args.push(`--allow-read=${cacheDir},/tmp`);
-		} else {
-			args.push("--allow-read=/tmp");
 		}
-
+		
 		args.push(entry);
 		const cmd = new Deno.Command("deno", {
 			args,

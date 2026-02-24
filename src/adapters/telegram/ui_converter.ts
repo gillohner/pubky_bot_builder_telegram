@@ -76,7 +76,7 @@ export function convertCard(card: UICard): {
 	let text = "";
 
 	if (card.title) {
-		text += `**${card.title}**\n\n`;
+		text += `*${card.title}*\n\n`;
 	}
 
 	if (card.description) {
@@ -119,11 +119,11 @@ export function convertCarousel(carousel: UICarousel): {
 	let text = "";
 
 	if (carousel.items.length > 1) {
-		text += `📋 **Carousel** (1 of ${carousel.items.length})\n\n`;
+		text += `📋 *Carousel* (1 of ${carousel.items.length})\n\n`;
 	}
 
 	if (firstItem.title) {
-		text += `**${firstItem.title}**\n\n`;
+		text += `*${firstItem.title}*\n\n`;
 	}
 
 	if (firstItem.description) {

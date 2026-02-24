@@ -14,6 +14,7 @@ import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
 import { buildEventSummary } from "../utils/preview.ts";
 import { validateDescription, validateLocationName } from "../utils/validation.ts";
+import { handleLocationSearchInput, handleOnlineUrlInput, showLocationTypeMenu } from "./location.ts";
 
 export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | MessageEvent) {
 	const config = (ev.serviceConfig ?? {}) as EventCreatorConfig;
@@ -25,7 +26,7 @@ export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | Mess
 			endtime: "requireEndTime",
 		};
 		const key = map[field];
-		return key && config[key] ? " *" : "";
+		return key && config[key] ? " ❗" : "";
 	};
 
 	const keyboard = UIBuilder.keyboard()
@@ -51,7 +52,7 @@ export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | Mess
 		.callback("❌ Cancel", "menu:cancel", "danger");
 
 	const summary = buildEventSummary(st, config);
-	const message = `${summary}\n\n**What would you like to do?**`;
+	const message = `${summary}\n\n*What would you like to do?*`;
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
@@ -67,7 +68,7 @@ export function handleOptionalMenuAction(
 	switch (action) {
 		case "description":
 			return reply(
-				"📝 **Add Description**\n\n" +
+				"📝 *Add Description*\n\n" +
 					'Enter a description for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "description" }),
@@ -76,7 +77,7 @@ export function handleOptionalMenuAction(
 
 		case "image":
 			return reply(
-				"🖼️ **Add Image**\n\n" +
+				"🖼️ *Add Image*\n\n" +
 					'Send a photo for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "image" }),
@@ -84,17 +85,11 @@ export function handleOptionalMenuAction(
 			);
 
 		case "location":
-			return reply(
-				"📍 **Add Location**\n\n" +
-					'Enter the location name or address (or type "skip" to cancel):',
-				{
-					state: state.merge({ waitingFor: "location" }),
-				},
-			);
+			return showLocationTypeMenu(st);
 
 		case "endtime":
 			return reply(
-				"⏰ **Add End Time**\n\n" +
+				"⏰ *Add End Time*\n\n" +
 					'First, enter the end date (DD.MM.YYYY) or type "skip" to cancel:',
 				{
 					state: state.merge({ waitingFor: "endDate" }),
@@ -151,6 +146,12 @@ export function handleOptionalFieldInput(ev: MessageEvent) {
 		case "location":
 			return handleLocationInput(text, st, ev);
 
+		case "location_search":
+			return handleLocationSearchInput(text, st, ev);
+
+		case "location_online_url":
+			return handleOnlineUrlInput(text, st, ev);
+
 		case "endDate":
 			return handleEndDateInput(text, st, ev);
 
@@ -203,7 +204,7 @@ async function handleEndDateInput(text: string, _st: EventCreatorState, _ev: Mes
 	const normalized = normalizeDate(text) ?? text;
 
 	return reply(
-		`✅ End date: **${normalized}**\n\n` +
+		`✅ End date: *${normalized}*\n\n` +
 			`Now enter the end time (HH:MM):`,
 		{
 			state: state.merge({

@@ -63,6 +63,7 @@ export interface SandboxPayload {
 		serviceConfig?: Record<string, unknown>;
 		routeMeta?: { id: string; command: string; description?: string };
 		datasets?: Record<string, unknown>;
+		botPublicKey?: string;
 	};
 	manifest?: SandboxManifest;
 }

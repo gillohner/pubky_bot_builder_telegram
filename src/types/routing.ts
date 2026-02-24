@@ -11,6 +11,7 @@ export interface BaseRoute {
 	config?: Record<string, unknown>;
 	meta: RouteMeta;
 	datasets?: Record<string, unknown>; // placeholder for resolved dataset blobs (json / future binary refs)
+	net?: string[]; // allowed network domains for sandbox
 }
 export interface CommandRoute extends BaseRoute {
 	kind: "single_command" | "command_flow";

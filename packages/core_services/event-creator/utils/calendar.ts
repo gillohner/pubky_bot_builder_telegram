@@ -4,19 +4,49 @@
 import type { CalendarOption, EventCreatorConfig, EventCreatorState } from "../types.ts";
 
 /**
+ * Normalize calendars array to CalendarOption[].
+ * Config may store calendars as plain URI strings or as CalendarOption objects.
+ */
+function normalizeCalendars(calendars: unknown[]): CalendarOption[] {
+	return calendars.map((c, i) => {
+		if (typeof c === "string") {
+			// Plain URI string — first item is default
+			const parts = c.split("/");
+			return {
+				uri: c,
+				name: parts[parts.length - 1] || c,
+				isDefault: i === 0,
+			};
+		}
+		return c as CalendarOption;
+	});
+}
+
+/**
+ * Get normalized calendars from config, handling both string[] and CalendarOption[] formats
+ */
+export function getCalendars(config: EventCreatorConfig): CalendarOption[] {
+	if (!config.calendars || config.calendars.length === 0) {
+		return [];
+	}
+	return normalizeCalendars(config.calendars as unknown[]);
+}
+
+/**
  * Get the default calendar URI from config
  * Returns the calendar marked as default, or the first calendar in the array
  */
 export function getDefaultCalendarUri(config: EventCreatorConfig): string | undefined {
-	if (!config.calendars || config.calendars.length === 0) {
+	const calendars = getCalendars(config);
+	if (calendars.length === 0) {
 		return undefined;
 	}
 
-	const defaultCal = config.calendars.find((c) => c.isDefault);
+	const defaultCal = calendars.find((c) => c.isDefault);
 	if (defaultCal) return defaultCal.uri;
 
 	// If no explicit default, use first calendar
-	return config.calendars[0].uri;
+	return calendars[0].uri;
 }
 
 /**
@@ -47,11 +77,9 @@ export function getAllCalendarUris(
  * Get display name for a calendar URI
  */
 export function getCalendarName(uri: string, config: EventCreatorConfig): string {
-	// Check in calendars array
-	if (config.calendars) {
-		const cal = config.calendars.find((c) => c.uri === uri);
-		if (cal?.name) return cal.name;
-	}
+	const calendars = getCalendars(config);
+	const cal = calendars.find((c) => c.uri === uri);
+	if (cal?.name) return cal.name;
 
 	// Fallback to extracting ID from URI
 	const parts = uri.split("/");
@@ -62,19 +90,20 @@ export function getCalendarName(uri: string, config: EventCreatorConfig): string
  * Get non-default calendars for selection menu
  */
 export function getSelectableCalendars(config: EventCreatorConfig): CalendarOption[] {
-	if (!config.calendars || config.calendars.length <= 1) {
+	const calendars = getCalendars(config);
+	if (calendars.length <= 1) {
 		return [];
 	}
 
 	const defaultUri = getDefaultCalendarUri(config);
-	return config.calendars.filter((c) => c.uri !== defaultUri);
+	return calendars.filter((c) => c.uri !== defaultUri);
 }
 
 /**
  * Check if calendar selection is enabled (multiple calendars configured)
  */
 export function isCalendarSelectionEnabled(config: EventCreatorConfig): boolean {
-	return !!config.calendars && config.calendars.length > 1;
+	return getCalendars(config).length > 1;
 }
 
 /**
@@ -89,9 +118,7 @@ export function encodeCalendarId(uri: string): string {
  * Decode calendar ID from callback data back to full URI
  */
 export function decodeCalendarId(id: string, config: EventCreatorConfig): string | undefined {
-	if (config.calendars) {
-		const cal = config.calendars.find((c) => c.uri.endsWith("/" + id) || c.uri === id);
-		return cal?.uri;
-	}
-	return undefined;
+	const calendars = getCalendars(config);
+	const cal = calendars.find((c) => c.uri.endsWith("/" + id) || c.uri === id);
+	return cal?.uri;
 }

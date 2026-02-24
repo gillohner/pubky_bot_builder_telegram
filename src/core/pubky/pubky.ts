@@ -64,6 +64,8 @@ export interface PubkyServiceSpec {
 	config?: Record<string, unknown>;
 	/** Explicit service ID from config; used as fallback when loadMeta fails */
 	serviceId?: string;
+	/** Allowed network domains for sandbox (e.g., ["nominatim.openstreetmap.org"]) */
+	net?: string[];
 }
 
 export interface PubkyBotConfigTemplate {
@@ -132,6 +134,7 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				kind: "command_flow",
 				entry: "./packages/core_services/event-creator/service.ts",
 				serviceId: "event_creator",
+				net: ["nominatim.openstreetmap.org"],
 				config: {
 					// calendarUri: "pubky://your-pk/pub/eventky.app/calendars/your-calendar-id",
 					defaultTimezone: "UTC",
@@ -650,6 +653,11 @@ async function resolveServiceRef(
 	const serviceId = (rawConfig.manifest as Record<string, unknown>)?.serviceId as string ||
 		undefined;
 
+	// Extract net permissions from manifest or top-level config
+	const net = (rawConfig.manifest as Record<string, unknown>)?.net as string[] ||
+		rawConfig.net as string[] ||
+		undefined;
+
 	return {
 		name: resolvedName,
 		command: command || resolvedName.toLowerCase().replace(/\s+/g, "_"), // Fallback for listeners
@@ -659,6 +667,7 @@ async function resolveServiceRef(
 		source: `${resolvedSource.type}:${resolvedSource.location}`,
 		config: Object.keys(filteredConfig).length > 0 ? filteredConfig : undefined,
 		serviceId,
+		net,
 	};
 }
 

@@ -9,7 +9,6 @@ import { getAllCalendarUris } from "../utils/calendar.ts";
 import { applyTemplate, buildEventUrl, formatDateTime } from "../utils/formatting.ts";
 import { buildAdminPreview } from "../utils/preview.ts";
 import { canSubmit } from "../utils/state.ts";
-import { pubkyWriter } from "@core/pubky/writer.ts";
 
 export function handleSubmit(ev: CallbackEvent) {
 	const st = (ev.state ?? {}) as EventCreatorState;
@@ -37,8 +36,9 @@ export function handleSubmit(ev: CallbackEvent) {
 		? [
 			{
 				name: st.location.name,
-				location_type: "PHYSICAL" as const,
+				location_type: (st.location.location_type ?? "PHYSICAL") as "PHYSICAL" | "ONLINE",
 				description: st.location.address,
+				structured_data: st.location.structured_data,
 				geo: st.location.lat && st.location.lng
 					? `${st.location.lat};${st.location.lng}`
 					: undefined,
@@ -66,9 +66,9 @@ export function handleSubmit(ev: CallbackEvent) {
 	const preview = buildAdminPreview(result.event, st, config);
 
 	// Build return message with eventky.app URL
-	const userId = pubkyWriter.getPublicKey();
+	const userId = ev.botPublicKey;
 	if (!userId) {
-		return error("Pubky writer not initialized");
+		return error("Bot public key not available");
 	}
 
 	const eventUrl = buildEventUrl(userId, result.meta.id, dtstart);

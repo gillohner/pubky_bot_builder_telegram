@@ -85,24 +85,10 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		// Map @eventky/ -> ./packages/eventky-specs/
 		return importPath.replace("@eventky/", "./packages/eventky-specs/");
 	}
-	if (importPath.startsWith("./") || importPath.startsWith("../")) {
+	if (importPath.startsWith("./")) {
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));
-		const raw = `${baseDir}/${importPath}`;
-		// Normalize path: resolve . and .. segments, preserve leading ./
-		const parts = raw.split("/");
-		const normalized: string[] = [];
-		for (let i = 0; i < parts.length; i++) {
-			const part = parts[i];
-			if (part === "..") {
-				normalized.pop();
-			} else if (part === "." && i > 0) {
-				// Skip mid-path . segments, keep leading . (preserves ./ prefix)
-			} else {
-				normalized.push(part);
-			}
-		}
-		let resolved = normalized.join("/");
+		let resolved = `${baseDir}/${importPath.substring(2)}`;
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
 	}
@@ -161,9 +147,9 @@ async function inlineAllImports(
 				continue;
 			}
 
-			// Prevent directory escape outside project root
-			if (!absolutePath.startsWith(projectRoot)) {
-				log.warn("bundleService.security.escape", { entryPath, importPath, absolutePath });
+			// Prevent directory escape for security
+			if (importPath.includes("../")) {
+				log.warn("bundleService.security.escape", { entryPath, importPath });
 				chunks.push(fullStatement); // Preserve original
 				continue;
 			}
@@ -204,7 +190,7 @@ function detectNpmImports(code: string): { hasNpm: boolean; packages: string[]; 
 	const packages: string[] = [];
 	const disallowed: string[] = [];
 	let match: RegExpExecArray | null;
-
+	
 	while ((match = npmImportRegex.exec(code))) {
 		const npmSpec = match[1];
 		packages.push(npmSpec);
@@ -212,7 +198,7 @@ function detectNpmImports(code: string): { hasNpm: boolean; packages: string[]; 
 			disallowed.push(npmSpec);
 		}
 	}
-
+	
 	return {
 		hasNpm: packages.length > 0,
 		packages,
@@ -228,34 +214,34 @@ async function bundleWithEsbuild(
 ): Promise<string> {
 	// Create a temporary entry file that imports the service
 	const tempDir = await Deno.makeTempDir({ prefix: "service_bundle_" });
-
+	
 	try {
 		// Resolve service path to absolute if relative
 		const absoluteServicePath = servicePath.startsWith("./") || servicePath.startsWith("../")
 			? `${projectRoot}/${servicePath.replace(/^\.\//, "")}`
 			: servicePath;
-
+		
 		// Read the original service
 		const originalCode = await Deno.readTextFile(absoluteServicePath);
-
+		
 		// Get the absolute directory of the service
 		const serviceDir = absoluteServicePath.substring(0, absoluteServicePath.lastIndexOf("/"));
-
+		
 		// Resolve all @sdk/ and @eventky/ imports to absolute paths
 		let processedCode = originalCode
 			.replace(/"@sdk\//g, `"${projectRoot}/packages/sdk/`)
 			.replace(/'@sdk\//g, `'${projectRoot}/packages/sdk/`)
 			.replace(/"@eventky\//g, `"${projectRoot}/packages/eventky-specs/`)
 			.replace(/'@eventky\//g, `'${projectRoot}/packages/eventky-specs/`);
-
+		
 		// Also resolve relative imports from the service directory to absolute paths
 		processedCode = processedCode
 			.replace(/from\s+"\.\/([^"]+)"/g, `from "${serviceDir}/$1"`)
 			.replace(/from\s+'\.\/([^']+)'/g, `from '${serviceDir}/$1'`);
-
+		
 		const tempEntry = `${tempDir}/entry.ts`;
 		await Deno.writeTextFile(tempEntry, processedCode);
-
+		
 		// Create deno.json for the temp directory with npm specifiers
 		const denoConfig = {
 			imports: {
@@ -264,10 +250,10 @@ async function bundleWithEsbuild(
 			},
 		};
 		await Deno.writeTextFile(`${tempDir}/deno.json`, JSON.stringify(denoConfig));
-
+		
 		// Use deno emit API or fall back to manual approach
 		// For now, we'll use the deno vendor + concatenation approach
-
+		
 		// Step 1: Vendor the dependencies
 		const vendorCmd = new Deno.Command("deno", {
 			args: ["cache", "--quiet", tempEntry],
@@ -275,18 +261,18 @@ async function bundleWithEsbuild(
 			stderr: "piped",
 			cwd: tempDir,
 		});
-
+		
 		const vendorOutput = await vendorCmd.output();
 		if (!vendorOutput.success) {
 			const stderr = new TextDecoder().decode(vendorOutput.stderr);
 			log.warn("bundleService.cache.warn", { stderr });
 			// Continue anyway - cache might already exist
 		}
-
+		
 		// Step 2: Read the processed code and inline SDK manually
 		const visited = new Set<string>();
 		const inlined = await inlineAllImports(tempEntry, visited, projectRoot);
-
+		
 		return inlined;
 	} finally {
 		// Cleanup temp files
@@ -317,8 +303,8 @@ export async function bundleService(
 		const cacheKey = `${servicePath}::${sdkSig}`;
 		const prev = cache.get(cacheKey);
 		if (prev && prev.mtimeSvc === svcMeta.mtime && prev.sdkSig === sdkSig) {
-			return {
-				entry: prev.url,
+			return { 
+				entry: prev.url, 
 				code: prev.code,
 				hasNpm: prev.hasNpm || false,
 			};
@@ -326,7 +312,7 @@ export async function bundleService(
 
 		// Check for npm imports in the service file
 		const { hasNpm, disallowed } = detectNpmImports(svcMeta.code);
-
+		
 		if (disallowed.length > 0) {
 			throw new Error(
 				`Service uses disallowed npm packages: ${disallowed.join(", ")}. ` +
@@ -335,23 +321,23 @@ export async function bundleService(
 		}
 
 		let finalCode: string;
-
+		
 		if (hasNpm) {
 			// Use esbuild approach for services with npm dependencies
 			log.info("bundleService.npm", { servicePath, strategy: "esbuild" });
 			finalCode = await bundleWithEsbuild(servicePath, projectRoot);
-
+			
 			// For npm services, write to a temp file instead of data URL
 			// because npm: imports don't work in data URLs
 			const bundleDir = await getNpmBundleDir();
 			const hash = await simpleHash(servicePath + sdkSig);
 			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
 			await Deno.writeTextFile(tempFilePath, finalCode);
-
-			cache.set(cacheKey, {
-				url: tempFilePath,
-				code: finalCode,
-				sdkSig,
+			
+			cache.set(cacheKey, { 
+				url: tempFilePath, 
+				code: finalCode, 
+				sdkSig, 
 				mtimeSvc: svcMeta.mtime,
 				hasNpm: true,
 				tempFilePath,
@@ -361,7 +347,7 @@ export async function bundleService(
 			// Use manual inlining for services without npm (faster)
 			const visited = new Set<string>();
 			let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
-
+			
 			// If service forgot to import SDK, inject it explicitly.
 			if (!inlinedService.includes("@sdk/mod.ts")) {
 				inlinedService = `import \"@sdk/mod.ts\";\n${inlinedService}`;
@@ -376,15 +362,15 @@ export async function bundleService(
 
 			// Collapse multiple blank lines introduced by removals for neatness.
 			finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
+			
+			// Encode as data URL
+			const enc = new TextEncoder().encode(finalCode);
+			let binary = "";
+			for (const b of enc) binary += String.fromCharCode(b);
+			const url = `data:application/typescript;base64,${btoa(binary)}`;
 
-			// Write to temp file (data URLs hit OS argument length limits for large bundles)
-			const bundleDir = await getNpmBundleDir();
-			const hash = await simpleHash(servicePath + sdkSig);
-			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
-			await Deno.writeTextFile(tempFilePath, finalCode);
-
-			cache.set(cacheKey, { url: tempFilePath, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false, tempFilePath });
-			return { entry: tempFilePath, code: finalCode, hasNpm: false };
+			cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false });
+			return { entry: url, code: finalCode, hasNpm: false };
 		}
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });

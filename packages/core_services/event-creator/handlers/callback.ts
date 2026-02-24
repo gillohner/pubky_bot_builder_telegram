@@ -2,9 +2,15 @@
 // Callback handler router for optional menu and calendar selection
 
 import { type CallbackEvent, reply, state } from "@sdk/mod.ts";
-import { CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
+import { CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_LOCATION_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
 import { handleCalendarMenu, handleCalendarToggle } from "../flows/calendar.ts";
 import { handleEditField, handleEditMenu } from "../flows/edit.ts";
+import {
+	handleLocationSelect,
+	handleLocationTypeSelect,
+	handleUseAsName,
+	showLocationTypeMenu,
+} from "../flows/location.ts";
 import { handleOptionalMenuAction } from "../flows/optional_menu.ts";
 import { handleSubmit } from "../flows/submit.ts";
 
@@ -18,6 +24,10 @@ export function handleCallback(ev: CallbackEvent) {
 
 	if (data.startsWith(CB_CALENDAR_PREFIX)) {
 		return handleCalendarCallback(ev, data);
+	}
+
+	if (data.startsWith(CB_LOCATION_PREFIX)) {
+		return handleLocationCallback(ev, data);
 	}
 
 	if (data.startsWith(CB_EDIT_PREFIX)) {
@@ -69,6 +79,28 @@ function handleCalendarCallback(ev: CallbackEvent, data: string) {
 
 	// Toggle calendar selection
 	return handleCalendarToggle(ev, action);
+}
+
+function handleLocationCallback(ev: CallbackEvent, data: string) {
+	const action = data.substring(CB_LOCATION_PREFIX.length);
+
+	if (action === "back") {
+		return handleOptionalMenuAction(ev, "back");
+	}
+
+	if (action.startsWith("type:")) {
+		return handleLocationTypeSelect(ev, action.substring("type:".length));
+	}
+
+	if (action.startsWith("select:")) {
+		return handleLocationSelect(ev, action.substring("select:".length));
+	}
+
+	if (action === "use_name") {
+		return handleUseAsName(ev);
+	}
+
+	return handleOptionalMenuAction(ev, "back");
 }
 
 function handleEditCallback(ev: CallbackEvent, data: string) {

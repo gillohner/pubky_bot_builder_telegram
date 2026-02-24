@@ -23,7 +23,9 @@ export interface EventCreatorState {
 	endTime?: string;
 	location?: {
 		name?: string;
+		location_type?: "PHYSICAL" | "ONLINE";
 		address?: string;
+		structured_data?: string; // OSM URL for physical, meeting URL for online
 		lat?: number;
 		lng?: number;
 	};

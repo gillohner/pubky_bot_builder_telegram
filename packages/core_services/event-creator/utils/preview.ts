@@ -15,7 +15,7 @@ export function buildAdminPreview(
 	config: EventCreatorConfig,
 ): string {
 	const lines: string[] = [
-		`📅 **${event.summary}**`,
+		`📅 *${event.summary}*`,
 	];
 
 	if (event.description) {
@@ -33,7 +33,11 @@ export function buildAdminPreview(
 	}
 
 	if (state.location?.name) {
-		lines.push(`📍 ${state.location.name}`);
+		const icon = state.location.location_type === "ONLINE" ? "💻" : "📍";
+		lines.push(`${icon} ${state.location.name}`);
+		if (state.location.structured_data) {
+			lines.push(`   🔗 ${state.location.structured_data}`);
+		}
 	}
 
 	if (state.imageFileId) {
@@ -67,46 +71,50 @@ export function buildEventSummary(
 			endTime: "requireEndTime",
 		};
 		const key = map[field];
-		return key && config[key] ? " *" : "";
+		return key && config[key] ? " ❗" : "";
 	};
 
 	const lines: string[] = [
-		`📋 **Event Summary**\n`,
-		`📌 **Title:** ${state.title}`,
-		`📅 **Date:** ${state.startDate}`,
-		`⏰ **Time:** ${state.startTime}`,
+		`📋 *Event Summary*\n`,
+		`📌 *Title:* ${state.title}`,
+		`📅 *Date:* ${state.startDate}`,
+		`⏰ *Time:* ${state.startTime}`,
 	];
 
 	// Optional fields
 	if (state.description) {
-		lines.push(`📝 **Description:** ${truncate(state.description, 100)}`);
+		lines.push(`📝 *Description:* ${truncate(state.description, 100)}`);
 	} else {
-		lines.push(`📝 **Description:** _(not set)_`);
+		lines.push(`📝 *Description:* _(not set)_`);
 	}
 
 	if (state.endDate && state.endTime) {
-		lines.push(`⏱️ **End${req("endTime")}:** ${state.endDate} at ${state.endTime}`);
+		lines.push(`⏱️ *End${req("endTime")}:* ${state.endDate} at ${state.endTime}`);
 	} else {
-		lines.push(`⏱️ **End${req("endTime")}:** _(not set)_`);
+		lines.push(`⏱️ *End${req("endTime")}:* _(not set)_`);
 	}
 
 	if (state.location?.name) {
-		lines.push(`📍 **Location${req("location")}:** ${truncate(state.location.name, 50)}`);
+		const icon = state.location.location_type === "ONLINE" ? "💻" : "📍";
+		const locText = state.location.location_type === "ONLINE"
+			? state.location.structured_data || state.location.name
+			: truncate(state.location.name, 50);
+		lines.push(`${icon} *Location${req("location")}:* ${locText}`);
 	} else {
-		lines.push(`📍 **Location${req("location")}:** _(not set)_`);
+		lines.push(`📍 *Location${req("location")}:* _(not set)_`);
 	}
 
 	if (state.imageFileId) {
-		lines.push(`🖼️ **Image${req("image")}:** ✅ Attached`);
+		lines.push(`🖼️ *Image${req("image")}:* ✅ Attached`);
 	} else {
-		lines.push(`🖼️ **Image${req("image")}:** _(not set)_`);
+		lines.push(`🖼️ *Image${req("image")}:* _(not set)_`);
 	}
 
 	// Calendar status
 	const calendars = getAllCalendarUris(state, config);
 	if (calendars.length > 0) {
 		const calNames = calendars.map((uri) => getCalendarName(uri, config));
-		lines.push(`\n📋 **Calendars:** ${calNames.join(", ")}`);
+		lines.push(`\n📋 *Calendars:* ${calNames.join(", ")}`);
 	}
 
 	return lines.join("\n");

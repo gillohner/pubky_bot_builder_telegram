@@ -329,11 +329,13 @@ async function handleUI(ctx: Context, r: Extract<ServiceResponse, { kind: "ui" }
 		if (result.photo) {
 			msg = await ctx.replyWithPhoto(result.photo, {
 				caption: result.text,
+				parse_mode: "Markdown",
 				// @ts-ignore - Grammy types are strict, but this is valid
 				reply_markup: result.reply_markup,
 			});
 		} else {
 			msg = await ctx.reply(result.text, {
+				parse_mode: "Markdown",
 				// @ts-ignore - Grammy types are strict, but this is valid
 				reply_markup: result.reply_markup,
 			});

@@ -36,8 +36,8 @@ function handleTitleInput(text: string, _st: EventCreatorState) {
 	}
 
 	return reply(
-		`✅ Title: **${text}**\n\n` +
-			`📝 **Step 2/3**: When is the event? (DD.MM.YYYY)\n\n` +
+		`✅ Title: *${text}*\n\n` +
+			`📝 *Step 2/3*: When is the event? (DD.MM.YYYY)\n\n` +
 			`Example: 23.04.2026`,
 		{
 			state: state.merge({
@@ -57,8 +57,8 @@ function handleDateInput(text: string, _st: EventCreatorState) {
 	const normalized = normalizeDate(text) ?? text;
 
 	return reply(
-		`✅ Date: **${normalized}**\n\n` +
-			`📝 **Step 3/3**: What time? (HH:MM in 24h format)\n\n` +
+		`✅ Date: *${normalized}*\n\n` +
+			`📝 *Step 3/3*: What time? (HH:MM in 24h format)\n\n` +
 			`Example: 19:30`,
 		{
 			state: state.merge({

@@ -51,7 +51,7 @@ export function handleEditMenu(ev: CallbackEvent) {
 
 	keyboard.callback("← Back to Menu", "edit:back");
 
-	const message = `✏️ **Edit Fields**\n\nSelect a field to edit:`;
+	const message = `✏️ *Edit Fields*\n\nSelect a field to edit:`;
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
@@ -158,7 +158,7 @@ async function validateAndUpdateField(
 				// Prompt for endTime if not set
 				if (!st.endTime) {
 					return reply(
-						`✅ End date: **${normalizedEnd}**\n\n` +
+						`✅ End date: *${normalizedEnd}*\n\n` +
 							`Now enter the end time (HH:MM):`,
 						{
 							state: state.merge({

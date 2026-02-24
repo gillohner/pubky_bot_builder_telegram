@@ -15,22 +15,22 @@ export const SIMPLE_RESPONSE_VERSION = "1.0.0" as const;
 // ============================================================================
 
 export interface SimpleResponseConfig {
-    /** The response message to send */
-    message: string;
-    /** Parse mode for the message (default: "Markdown") */
-    parseMode?: "Markdown" | "HTML" | "MarkdownV2";
-    /** Whether to disable link previews (default: false) */
-    disableLinkPreview?: boolean;
+	/** The response message to send */
+	message: string;
+	/** Parse mode for the message (default: "Markdown") */
+	parseMode?: "Markdown" | "HTML" | "MarkdownV2";
+	/** Whether to disable link previews (default: false) */
+	disableLinkPreview?: boolean;
 }
 
 export interface ValidationError {
-    path: string;
-    message: string;
+	path: string;
+	message: string;
 }
 
 export interface ValidationResult {
-    valid: boolean;
-    errors: ValidationError[];
+	valid: boolean;
+	errors: ValidationError[];
 }
 
 // ============================================================================
@@ -38,23 +38,23 @@ export interface ValidationResult {
 // ============================================================================
 
 export const SIMPLE_RESPONSE_CONFIG_SCHEMA: JSONSchema = {
-    type: "object",
-    properties: {
-        message: {
-            type: "string",
-            description: "The response message to send when the command is invoked",
-        },
-        parseMode: {
-            type: "string",
-            enum: ["Markdown", "HTML", "MarkdownV2"],
-            description: "Parse mode for the message (default: Markdown)",
-        },
-        disableLinkPreview: {
-            type: "boolean",
-            description: "Whether to disable link previews (default: false)",
-        },
-    },
-    required: ["message"],
+	type: "object",
+	properties: {
+		message: {
+			type: "string",
+			description: "The response message to send when the command is invoked",
+		},
+		parseMode: {
+			type: "string",
+			enum: ["Markdown", "HTML", "MarkdownV2"],
+			description: "Parse mode for the message (default: Markdown)",
+		},
+		disableLinkPreview: {
+			type: "boolean",
+			description: "Whether to disable link previews (default: false)",
+		},
+	},
+	required: ["message"],
 };
 
 export const SIMPLE_RESPONSE_DATASET_SCHEMAS: DatasetSchemas = {};
@@ -64,33 +64,33 @@ export const SIMPLE_RESPONSE_DATASET_SCHEMAS: DatasetSchemas = {};
 // ============================================================================
 
 export function validateConfig(data: unknown): ValidationResult {
-    const errors: ValidationError[] = [];
+	const errors: ValidationError[] = [];
 
-    if (typeof data !== "object" || data === null) {
-        errors.push({ path: "", message: "Config must be an object" });
-        return { valid: false, errors };
-    }
+	if (typeof data !== "object" || data === null) {
+		errors.push({ path: "", message: "Config must be an object" });
+		return { valid: false, errors };
+	}
 
-    const config = data as Record<string, unknown>;
+	const config = data as Record<string, unknown>;
 
-    if (typeof config.message !== "string") {
-        errors.push({ path: "message", message: "message is required and must be a string" });
-    } else if (config.message.trim().length === 0) {
-        errors.push({ path: "message", message: "message cannot be empty" });
-    }
+	if (typeof config.message !== "string") {
+		errors.push({ path: "message", message: "message is required and must be a string" });
+	} else if (config.message.trim().length === 0) {
+		errors.push({ path: "message", message: "message cannot be empty" });
+	}
 
-    if (config.parseMode !== undefined) {
-        const validModes = ["Markdown", "HTML", "MarkdownV2"];
-        if (!validModes.includes(config.parseMode as string)) {
-            errors.push({ path: "parseMode", message: `parseMode must be one of: ${validModes.join(", ")}` });
-        }
-    }
+	if (config.parseMode !== undefined) {
+		const validModes = ["Markdown", "HTML", "MarkdownV2"];
+		if (!validModes.includes(config.parseMode as string)) {
+			errors.push({ path: "parseMode", message: `parseMode must be one of: ${validModes.join(", ")}` });
+		}
+	}
 
-    if (config.disableLinkPreview !== undefined && typeof config.disableLinkPreview !== "boolean") {
-        errors.push({ path: "disableLinkPreview", message: "disableLinkPreview must be a boolean" });
-    }
+	if (config.disableLinkPreview !== undefined && typeof config.disableLinkPreview !== "boolean") {
+		errors.push({ path: "disableLinkPreview", message: "disableLinkPreview must be a boolean" });
+	}
 
-    return { valid: errors.length === 0, errors };
+	return { valid: errors.length === 0, errors };
 }
 
 // ============================================================================
@@ -98,7 +98,7 @@ export function validateConfig(data: unknown): ValidationResult {
 // ============================================================================
 
 export const DEFAULT_CONFIG: SimpleResponseConfig = {
-    message: "Hello! This is a simple response.",
-    parseMode: "Markdown",
-    disableLinkPreview: false,
+	message: "Hello! This is a simple response.",
+	parseMode: "Markdown",
+	disableLinkPreview: false,
 };

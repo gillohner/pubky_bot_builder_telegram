@@ -12,17 +12,17 @@ export function handleCommand(ev: CommandEvent) {
 
 	// Display welcome message with calendar info
 	const defaultUri = config ? getDefaultCalendarUri(config) : undefined;
-	const lines: string[] = ["🎉 **Create a New Event**\n"];
+	const lines: string[] = ["🎉 *Create a New Event*\n"];
 
 	if (defaultUri && config) {
-		lines.push(`📅 Calendar: **${getCalendarName(defaultUri, config)}**`);
+		lines.push(`📅 Calendar: *${getCalendarName(defaultUri, config)}*`);
 		if (calCount > 1) {
 			lines.push(`   _(+${calCount - 1} more available)_`);
 		}
 		lines.push("");
 	}
 
-	lines.push(`📝 **Step 1/3**: What's the event title? (max ${100} characters)`);
+	lines.push(`📝 *Step 1/3*: What's the event title? (max ${100} characters)`);
 
 	return reply(lines.join("\n"), {
 		state: state.replace({

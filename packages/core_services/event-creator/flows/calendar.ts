@@ -44,7 +44,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 	const defaultUri = getDefaultCalendarUri(config);
 	if (defaultUri) {
 		const defaultName = getCalendarName(defaultUri, config);
-		descLines.push(`📌 Default: **${defaultName}** _(always included)_`);
+		descLines.push(`📌 Default: *${defaultName}* _(always included)_`);
 	}
 	for (const cal of selectableCalendars) {
 		if (cal.description) {
@@ -53,7 +53,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 		}
 	}
 
-	const message = `📅 **Select Additional Calendars**\n\n` +
+	const message = `📅 *Select Additional Calendars*\n\n` +
 		(descLines.length > 0 ? descLines.join("\n") + "\n\n" : "") +
 		`Tap to toggle. Selected: ${selected.length}`;
 
