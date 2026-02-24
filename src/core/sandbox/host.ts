@@ -43,14 +43,13 @@ export class SandboxHost {
 			"--no-remote", // deny fetching remote modules (dynamic import of URLs will fail)
 		];
 
-		// If the service uses npm packages, we need to allow reading from the Deno cache
-		// and the temp bundle file. This is safe because:
-		// 1. The packages were pre-vetted against the allowlist
-		// 2. The temp file was created by the bundler
+		// All services are bundled to temp files in /tmp, so they need read access.
+		// npm services additionally need access to the Deno cache for npm: imports.
 		if (caps.hasNpm) {
 			const cacheDir = getDenoCacheDir();
-			// Allow reading from cache dir (for npm packages) and /tmp (for bundle file)
 			args.push(`--allow-read=${cacheDir},/tmp`);
+		} else {
+			args.push("--allow-read=/tmp");
 		}
 
 		// Allow network access to specific domains declared by the service
@@ -59,11 +58,19 @@ export class SandboxHost {
 		}
 
 		args.push(entry);
+		// Minimal env to avoid ARG_MAX limit and prevent leaking secrets to sandboxed services
+		const sandboxEnv: Record<string, string> = {
+			HOME: Deno.env.get("HOME") || "",
+			PATH: Deno.env.get("PATH") || "",
+		};
+		if (Deno.env.get("DENO_DIR")) sandboxEnv.DENO_DIR = Deno.env.get("DENO_DIR")!;
+		if (Deno.env.get("XDG_CACHE_HOME")) sandboxEnv.XDG_CACHE_HOME = Deno.env.get("XDG_CACHE_HOME")!;
 		const cmd = new Deno.Command("deno", {
 			args,
 			stdin: "piped",
 			stdout: "piped",
 			stderr: "piped",
+			env: sandboxEnv,
 		});
 		const child = cmd.spawn();
 		const writer = child.stdin.getWriter();

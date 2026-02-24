@@ -9,7 +9,7 @@ import {
 	UIBuilder,
 	uiKeyboard,
 } from "@sdk/mod.ts";
-import { SERVICE_ID } from "../constants.ts";
+import { MENU_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
 import { buildEventSummary } from "../utils/preview.ts";
@@ -60,7 +60,7 @@ export function showOptionalMenu(
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
-		options: extraOpts,
+		options: { ...extraOpts, replaceGroup: MENU_REPLACE_GROUP },
 	});
 }
 
@@ -77,6 +77,7 @@ export function handleOptionalMenuAction(
 					'Enter a description for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "description" }),
+					options: { cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 
@@ -86,6 +87,7 @@ export function handleOptionalMenuAction(
 					'Send a photo for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "image" }),
+					options: { cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 
@@ -98,6 +100,7 @@ export function handleOptionalMenuAction(
 					'First, enter the end date (DD.MM.YYYY) or type "skip" to cancel:',
 				{
 					state: state.merge({ waitingFor: "endDate" }),
+					options: { cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 

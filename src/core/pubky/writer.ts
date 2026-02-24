@@ -30,6 +30,10 @@ export interface QueueWriteParams {
 	userId: string;
 	chatId: string;
 	onApprovalMessage?: string;
+	/** Telegram username (without @) for admin display */
+	userName?: string;
+	/** Telegram display name for admin display */
+	userDisplayName?: string;
 }
 
 // Telegram bot API interface (injected to avoid circular deps)
@@ -90,7 +94,9 @@ class PubkyWriter {
 			const recoveryData = await Deno.readFile(this.config.recoveryFilePath);
 			const keypair = Keypair.fromRecoveryFile(recoveryData, this.config.passphrase);
 
-			this.publicKey = keypair.publicKey.toString();
+			const rawKey = keypair.publicKey.toString();
+			// Strip "pubky" prefix if present — toString() may include it
+			this.publicKey = rawKey.startsWith("pubky") ? rawKey.slice(5) : rawKey;
 
 			const signer = this.pubky.signer(keypair);
 
@@ -158,7 +164,10 @@ class PubkyWriter {
 		savePendingWrite(pending);
 
 		// Forward to admin group for approval
-		const adminMessageId = await this.forwardToAdminGroup(pending);
+		const adminMessageId = await this.forwardToAdminGroup(pending, {
+			userName: params.userName,
+			userDisplayName: params.userDisplayName,
+		});
 		if (adminMessageId) {
 			updatePendingWriteStatus(id, "pending", { adminMessageId });
 		}
@@ -457,23 +466,35 @@ class PubkyWriter {
 	/**
 	 * Forward a pending write to the admin group for approval.
 	 */
-	private async forwardToAdminGroup(pending: PendingWrite): Promise<number | undefined> {
+	private async forwardToAdminGroup(
+		pending: PendingWrite,
+		userInfo?: { userName?: string; userDisplayName?: string },
+	): Promise<number | undefined> {
 		if (!this.config.adminGroup || !this.botApi) {
 			log.debug("pubky.write.no_admin_group", { id: pending.id });
 			return undefined;
 		}
 
 		const expiresDate = new Date(pending.expiresAt).toISOString();
-		const message = `📝 **New Pubky Write Request**
+		// Build user display: clickable link if possible
+		let userDisplay: string;
+		if (userInfo?.userName) {
+			userDisplay = `[@${userInfo.userName}](tg://user?id=${pending.userId})`;
+		} else if (userInfo?.userDisplayName) {
+			userDisplay = `[${userInfo.userDisplayName}](tg://user?id=${pending.userId})`;
+		} else {
+			userDisplay = `[User ${pending.userId}](tg://user?id=${pending.userId})`;
+		}
+		const message = `📝 *New Pubky Write Request*
 
-**From:** User ${pending.userId}
-**Service:** ${pending.serviceId}
-**Path:** \`${pending.path}\`
+*From:* ${userDisplay} (${pending.userId})
+*Service:* ${pending.serviceId}
+*Path:* \`${pending.path}\`
 
-**Preview:**
+*Preview:*
 ${pending.preview}
 
-**Expires:** ${expiresDate}`.trim();
+*Expires:* ${expiresDate}`.trim();
 
 		try {
 			const result = await this.botApi.sendMessage(this.config.adminGroup, message, {

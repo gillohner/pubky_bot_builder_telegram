@@ -226,6 +226,25 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 };
 
 /**
+ * Normalize a calendar URI to the correct spec format:
+ *   pubky://<authorId>/pub/eventky.app/calendars/<calendarId>
+ */
+function normalizeCalendarUri(uri: string): string {
+	if (!uri.startsWith("pubky://")) return uri;
+	const rest = uri.slice("pubky://".length);
+	// Already correct format
+	if (/^[a-z0-9]{52}\/pub\/eventky\.app\/calendars\/[A-Z0-9]+$/.test(rest)) return uri;
+	// Malformed: pub/eventky.app/calendar(s?)/<pk>/<id>
+	const malformed = rest.match(
+		/^pub\/eventky\.app\/calendars?\/([a-z0-9]{52})\/([A-Z0-9]+)$/,
+	);
+	if (malformed) {
+		return `pubky://${malformed[1]}/pub/eventky.app/calendars/${malformed[2]}`;
+	}
+	return uri;
+}
+
+/**
  * Parse a GitHub/GitLab URL into a structured source object.
  * E.g., "https://github.com/user/repo/tree/main/packages/services/hello"
  * becomes { type: "github", location: "user/repo", entry: "./packages/services/hello/service.ts" }
@@ -600,6 +619,10 @@ async function resolveServiceRef(
 	if (Array.isArray(mergedConfig.calendars)) {
 		const calendars = mergedConfig.calendars as Record<string, unknown>[];
 		for (const cal of calendars) {
+			// Normalize calendar URI to correct spec format
+			if (typeof cal.uri === "string") {
+				cal.uri = normalizeCalendarUri(cal.uri);
+			}
 			if (typeof cal.uri === "string" && !cal.name) {
 				try {
 					const calResponse = await client.fetch(cal.uri as string);
@@ -639,8 +662,7 @@ async function resolveServiceRef(
 	}
 
 	const config: Record<string, unknown> = {
-		...(rawConfig.config as Record<string, unknown> | undefined),
-		...serviceRef.overrides?.config,
+		...mergedConfig,
 		datasets: Object.keys(resolvedDatasets).length > 0 ? resolvedDatasets : undefined,
 	};
 

@@ -2,7 +2,7 @@
 // Calendar selection and toggle handlers
 
 import { type CallbackEvent, reply, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
-import { SERVICE_ID } from "../constants.ts";
+import { CAL_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import {
 	decodeCalendarId,
@@ -59,6 +59,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
+		options: { replaceGroup: CAL_REPLACE_GROUP },
 	});
 }
 

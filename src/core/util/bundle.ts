@@ -107,6 +107,7 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 
 // Resolve a relative path (including ../) against a base directory
 function resolveRelativePath(baseDir: string, relativePath: string): string {
+	const isAbsolute = baseDir.startsWith("/");
 	const parts = baseDir.split("/").filter(Boolean);
 	const relParts = relativePath.split("/");
 	for (const seg of relParts) {
@@ -117,6 +118,8 @@ function resolveRelativePath(baseDir: string, relativePath: string): string {
 		}
 	}
 	const result = parts.join("/");
+	// Absolute paths (from already-resolved entries) must keep their leading /
+	if (isAbsolute) return "/" + result;
 	// Preserve leading ./ for project-relative paths
 	return result.startsWith("packages/") || result.startsWith("src/") ? "./" + result : result;
 }
@@ -270,19 +273,30 @@ async function bundleWithEsbuild(
 		// Use deno emit API or fall back to manual approach
 		// For now, we'll use the deno vendor + concatenation approach
 
-		// Step 1: Vendor the dependencies
+		// Step 1: Vendor the dependencies (minimal env to avoid ARG_MAX limit)
 		const vendorCmd = new Deno.Command("deno", {
 			args: ["cache", "--quiet", tempEntry],
 			stdout: "piped",
 			stderr: "piped",
 			cwd: tempDir,
+			env: {
+				HOME: Deno.env.get("HOME") || "",
+				PATH: Deno.env.get("PATH") || "",
+				...(Deno.env.get("DENO_DIR") ? { DENO_DIR: Deno.env.get("DENO_DIR")! } : {}),
+				...(Deno.env.get("XDG_CACHE_HOME") ? { XDG_CACHE_HOME: Deno.env.get("XDG_CACHE_HOME")! } : {}),
+			},
 		});
 
-		const vendorOutput = await vendorCmd.output();
-		if (!vendorOutput.success) {
-			const stderr = new TextDecoder().decode(vendorOutput.stderr);
-			log.warn("bundleService.cache.warn", { stderr });
-			// Continue anyway - cache might already exist
+		try {
+			const vendorOutput = await vendorCmd.output();
+			if (!vendorOutput.success) {
+				const stderr = new TextDecoder().decode(vendorOutput.stderr);
+				log.warn("bundleService.cache.warn", { stderr });
+				// Continue anyway - cache might already exist
+			}
+		} catch (e) {
+			log.warn("bundleService.cache.spawn", { error: (e as Error).message });
+			// Continue - inlining may still work without cache
 		}
 
 		// Step 2: Read the processed code and inline SDK manually
@@ -359,7 +373,7 @@ export async function bundleService(
 				tempFilePath,
 			});
 			return { entry: tempFilePath, code: finalCode, hasNpm: true };
-		} else {
+			} else {
 			// Use manual inlining for services without npm (faster)
 			const visited = new Set<string>();
 			let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
@@ -370,7 +384,7 @@ export async function bundleService(
 			}
 
 			// After inlining, strip ANY remaining import statements (they cannot
-			// resolve from a data: URL and would cause "invalid URL: relative URL with a cannot-be-a-base base")
+			// resolve from a temp file and would cause module resolution errors)
 			// This is a safety net in case some imports weren't properly inlined.
 			const importStripRegex =
 				/^(?:\s*import\s+(?:type\s+)?(?:[^'";]+from\s+)?["'][^"']*["'];?\s*)$/gm;
@@ -379,14 +393,14 @@ export async function bundleService(
 			// Collapse multiple blank lines introduced by removals for neatness.
 			finalCode = sanitized.replace(/\n{3,}/g, "\n\n");
 
-			// Encode as data URL
-			const enc = new TextEncoder().encode(finalCode);
-			let binary = "";
-			for (const b of enc) binary += String.fromCharCode(b);
-			const url = `data:application/typescript;base64,${btoa(binary)}`;
+			// Write to temp file instead of data URL to avoid OS ARG_MAX limit
+			const bundleDir = await getNpmBundleDir();
+			const hash = await simpleHash(servicePath + sdkSig);
+			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
+			await Deno.writeTextFile(tempFilePath, finalCode);
 
-			cache.set(cacheKey, { url, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false });
-			return { entry: url, code: finalCode, hasNpm: false };
+			cache.set(cacheKey, { url: tempFilePath, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false, tempFilePath });
+			return { entry: tempFilePath, code: finalCode, hasNpm: false };
 		}
 	} catch (err) {
 		log.error("bundleService.error", { error: (err as Error).message, servicePath });

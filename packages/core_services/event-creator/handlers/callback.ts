@@ -2,7 +2,7 @@
 // Callback handler router for optional menu and calendar selection
 
 import { type CallbackEvent, reply, state } from "@sdk/mod.ts";
-import { CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_LOCATION_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
+import { CAL_REPLACE_GROUP, CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_LOCATION_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
 import { handleCalendarMenu, handleCalendarToggle } from "../flows/calendar.ts";
 import { handleEditField, handleEditMenu } from "../flows/edit.ts";
 import {
@@ -12,7 +12,7 @@ import {
 	handleLocationTypeSelect,
 	handleUseAsName,
 } from "../flows/location.ts";
-import { handleOptionalMenuAction } from "../flows/optional_menu.ts";
+import { handleOptionalMenuAction, showOptionalMenu } from "../flows/optional_menu.ts";
 import { handleSubmit } from "../flows/submit.ts";
 
 export function handleCallback(ev: CallbackEvent) {
@@ -74,8 +74,11 @@ function handleCalendarCallback(ev: CallbackEvent, data: string) {
 	const action = data.substring(CB_CALENDAR_PREFIX.length);
 
 	if (action === "back") {
-		// Return to optional menu
-		return handleOptionalMenuAction(ev, "back");
+		// Return to optional menu, clean up calendar message
+		const st = (ev.state ?? {}) as Record<string, unknown>;
+		return showOptionalMenu(st as import("../types.ts").EventCreatorState, ev, {
+			cleanupGroup: CAL_REPLACE_GROUP,
+		});
 	}
 
 	// Toggle calendar selection

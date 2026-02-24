@@ -4,21 +4,50 @@
 import type { CalendarOption, EventCreatorConfig, EventCreatorState } from "../types.ts";
 
 /**
+ * Normalize a calendar URI to the correct spec format:
+ *   pubky://<authorId>/pub/eventky.app/calendars/<calendarId>
+ *
+ * Handles malformed variants like:
+ *   pubky://pub/eventky.app/calendar/<pk>/<id>
+ *   pubky://pub/eventky.app/calendars/<pk>/<id>
+ */
+function normalizeCalendarUri(uri: string): string {
+	if (!uri.startsWith("pubky://")) return uri;
+	const rest = uri.slice("pubky://".length);
+	// Correct format: <pk>/pub/eventky.app/calendars/<id>
+	const correctMatch = rest.match(
+		/^([a-z0-9]{52})\/pub\/eventky\.app\/calendars\/([A-Z0-9]+)$/,
+	);
+	if (correctMatch) return uri; // already correct
+
+	// Malformed: pub/eventky.app/calendar(s?)/<pk>/<id>
+	const malformed = rest.match(
+		/^pub\/eventky\.app\/calendars?\/([a-z0-9]{52})\/([A-Z0-9]+)$/,
+	);
+	if (malformed) {
+		return `pubky://${malformed[1]}/pub/eventky.app/calendars/${malformed[2]}`;
+	}
+
+	return uri; // return as-is if no pattern matches
+}
+
+/**
  * Normalize calendars array to CalendarOption[].
  * Config may store calendars as plain URI strings or as CalendarOption objects.
  */
 function normalizeCalendars(calendars: unknown[]): CalendarOption[] {
 	return calendars.map((c, i) => {
 		if (typeof c === "string") {
-			// Plain URI string — first item is default
-			const parts = c.split("/");
+			const normalized = normalizeCalendarUri(c);
+			const parts = normalized.split("/");
 			return {
-				uri: c,
-				name: parts[parts.length - 1] || c,
+				uri: normalized,
+				name: parts[parts.length - 1] || normalized,
 				isDefault: i === 0,
 			};
 		}
-		return c as CalendarOption;
+		const cal = c as CalendarOption;
+		return { ...cal, uri: normalizeCalendarUri(cal.uri) };
 	});
 }
 
