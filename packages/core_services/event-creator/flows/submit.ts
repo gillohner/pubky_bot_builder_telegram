@@ -71,7 +71,7 @@ export function handleSubmit(ev: CallbackEvent) {
 		return error("Bot public key not available");
 	}
 
-	const eventUrl = buildEventUrl(userId, result.meta.id, dtstart);
+	const eventUrl = buildEventUrl(userId, result.meta.id);
 	const returnMessage = applyTemplate(
 		config.returnMessageTemplate || DEFAULT_RETURN_TEMPLATE,
 		{

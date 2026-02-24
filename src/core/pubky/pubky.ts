@@ -617,12 +617,22 @@ async function resolveServiceRef(
 		...serviceRef.overrides?.config,
 	};
 	if (Array.isArray(mergedConfig.calendars)) {
-		const calendars = mergedConfig.calendars as Record<string, unknown>[];
-		for (const cal of calendars) {
-			// Normalize calendar URI to correct spec format
-			if (typeof cal.uri === "string") {
-				cal.uri = normalizeCalendarUri(cal.uri);
+		// Normalize: convert plain URI strings to CalendarOption objects
+		const normalized: Record<string, unknown>[] = [];
+		for (const entry of mergedConfig.calendars) {
+			if (typeof entry === "string") {
+				normalized.push({ uri: normalizeCalendarUri(entry) });
+			} else if (typeof entry === "object" && entry !== null) {
+				const cal = entry as Record<string, unknown>;
+				if (typeof cal.uri === "string") {
+					cal.uri = normalizeCalendarUri(cal.uri);
+				}
+				normalized.push(cal);
 			}
+		}
+
+		// Fetch names from homeserver for calendars missing names
+		for (const cal of normalized) {
 			if (typeof cal.uri === "string" && !cal.name) {
 				try {
 					const calResponse = await client.fetch(cal.uri as string);
@@ -640,6 +650,7 @@ async function resolveServiceRef(
 				}
 			}
 		}
+		mergedConfig.calendars = normalized;
 	}
 
 	// Build the resolved service spec

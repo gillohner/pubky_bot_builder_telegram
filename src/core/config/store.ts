@@ -144,6 +144,16 @@ export function deleteSnapshotByConfigHash(configHash: string): void {
 	database.query(`DELETE FROM snapshots_by_config WHERE config_hash = ?`, [configHash]);
 }
 
+/**
+ * Clear all persisted snapshots. Called on process startup so that
+ * code changes (--watch restart) or config changes are always picked up
+ * on the first request, without requiring /updateconfig or DB deletion.
+ */
+export function clearAllSnapshots(): void {
+	const database = ensureDb();
+	database.query(`DELETE FROM snapshots_by_config`);
+}
+
 // ---------------------------------------------------------------------------
 // Chat-id keyed snapshots (auxiliary / debugging usage)
 // ---------------------------------------------------------------------------

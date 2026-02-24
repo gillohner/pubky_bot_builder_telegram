@@ -14,6 +14,7 @@ import type { EventCreatorState } from "../types.ts";
 import { getEditPrompt, isFieldClearable } from "../utils/state.ts";
 import {
 	normalizeDate,
+	parseDateParts,
 	validateDate,
 	validateDescription,
 	validateEndTime,
@@ -80,10 +81,19 @@ export function handleEditFieldInput(ev: MessageEvent) {
 		return showOptionalMenu(st, ev);
 	}
 
-	// Handle photo for image field
-	if (field === "imageFileId" && message.photo) {
-		const photos = message.photo as Array<{ file_id: string }>;
-		const fileId = photos[photos.length - 1]?.file_id;
+	// Handle photo/document for image field
+	if (field === "imageFileId") {
+		let fileId: string | undefined;
+
+		if (message.photo) {
+			const photos = message.photo as Array<{ file_id: string }>;
+			fileId = photos[photos.length - 1]?.file_id;
+		} else if (message.document) {
+			const doc = message.document as { file_id: string; mime_type?: string };
+			if (doc.mime_type?.startsWith("image/")) {
+				fileId = doc.file_id;
+			}
+		}
 
 		if (fileId) {
 			const updatedState = {
@@ -93,6 +103,10 @@ export function handleEditFieldInput(ev: MessageEvent) {
 				editingField: undefined,
 			};
 			return showOptionalMenu(updatedState, ev);
+		}
+
+		if (message.document) {
+			return reply("Please send an image file (JPEG, PNG, etc.), not other file types.");
 		}
 	}
 
@@ -155,6 +169,22 @@ function validateAndUpdateField(
 			validation = validateDate(text);
 			if (validation.valid) {
 				const normalizedEnd = normalizeDate(text) ?? text;
+				// Validate end date is not before start date
+				if (st.startDate) {
+					const startParts = parseDateParts(st.startDate);
+					const endParts = parseDateParts(normalizedEnd);
+					if (startParts && endParts) {
+						const startVal = startParts.year * 10000 + startParts.month * 100 +
+							startParts.day;
+						const endVal = endParts.year * 10000 + endParts.month * 100 + endParts.day;
+						if (endVal < startVal) {
+							return reply(
+								`End date (${normalizedEnd}) is before the start date (${st.startDate}).\n\n` +
+									`Please enter an end date on or after the start date:`,
+							);
+						}
+					}
+				}
 				updatedState.endDate = normalizedEnd;
 				// Prompt for endTime if not set
 				if (!st.endTime) {

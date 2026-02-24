@@ -13,7 +13,7 @@ import { MENU_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
 import { buildEventSummary } from "../utils/preview.ts";
-import { normalizeDate, validateDate, validateDescription, validateEndTime, validateLocationName, validateTime } from "../utils/validation.ts";
+import { normalizeDate, parseDateParts, validateDate, validateDescription, validateEndTime, validateLocationName, validateTime } from "../utils/validation.ts";
 import { handleLocationSearchInput, handleOnlineUrlInput, showLocationTypeMenu } from "./location.ts";
 
 export function showOptionalMenu(
@@ -119,10 +119,21 @@ export function handleOptionalFieldInput(ev: MessageEvent) {
 	const text = (message.text as string)?.trim() ?? "";
 	const waitingFor = (st as Record<string, unknown>).waitingFor as string | undefined;
 
-	// Handle photo uploads
-	if (message.photo && waitingFor === "image") {
-		const photos = message.photo as Array<{ file_id: string }>;
-		const fileId = photos[photos.length - 1]?.file_id;
+	// Handle photo/document uploads
+	if (waitingFor === "image") {
+		let fileId: string | undefined;
+
+		if (message.photo) {
+			// Compressed image sent as photo
+			const photos = message.photo as Array<{ file_id: string }>;
+			fileId = photos[photos.length - 1]?.file_id;
+		} else if (message.document) {
+			// Uncompressed image sent as document/file
+			const doc = message.document as { file_id: string; mime_type?: string };
+			if (doc.mime_type?.startsWith("image/")) {
+				fileId = doc.file_id;
+			}
+		}
 
 		if (fileId) {
 			const updatedState = {
@@ -131,8 +142,12 @@ export function handleOptionalFieldInput(ev: MessageEvent) {
 				waitingFor: undefined,
 			};
 			delete (updatedState as Record<string, unknown>).waitingFor;
-			// Update state and show menu
 			return showOptionalMenu(updatedState, ev);
+		}
+
+		// If document is not an image, tell the user
+		if (message.document) {
+			return reply("Please send an image file (JPEG, PNG, etc.), not other file types.");
 		}
 	}
 
@@ -201,13 +216,29 @@ function handleLocationInput(text: string, st: EventCreatorState, ev: MessageEve
 	return showOptionalMenu(updatedState, ev);
 }
 
-function handleEndDateInput(text: string, _st: EventCreatorState, _ev: MessageEvent) {
+function handleEndDateInput(text: string, st: EventCreatorState, _ev: MessageEvent) {
 	const validation = validateDate(text);
 	if (!validation.valid) {
 		return reply(validation.error!);
 	}
 
 	const normalized = normalizeDate(text) ?? text;
+
+	// Validate end date is not before start date
+	if (st.startDate) {
+		const startParts = parseDateParts(st.startDate);
+		const endParts = parseDateParts(normalized);
+		if (startParts && endParts) {
+			const startVal = startParts.year * 10000 + startParts.month * 100 + startParts.day;
+			const endVal = endParts.year * 10000 + endParts.month * 100 + endParts.day;
+			if (endVal < startVal) {
+				return reply(
+					`End date (${normalized}) is before the start date (${st.startDate}).\n\n` +
+						`Please enter an end date on or after the start date:`,
+				);
+			}
+		}
+	}
 
 	return reply(
 		`✅ End date: *${normalized}*\n\n` +

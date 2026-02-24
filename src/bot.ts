@@ -1,6 +1,6 @@
 // src/bot.ts
 import { Bot } from "grammy";
-import { getDb, initDb } from "@core/config/store.ts";
+import { clearAllSnapshots, getDb, initDb } from "@core/config/store.ts";
 import { buildMiddleware } from "@middleware/router.ts";
 import { pubkyWriter } from "@core/pubky/writer.ts";
 import { setWriterDb } from "@core/pubky/writer_store.ts";
@@ -10,6 +10,8 @@ if (!token) throw new Error("BOT_TOKEN is required");
 
 // Initialize persistent stores (configs & snapshots)
 initDb();
+// Clear stale snapshots so first request rebuilds with fresh code/config
+clearAllSnapshots();
 
 export const bot = new Bot(token);
 

@@ -21,15 +21,13 @@ export function formatDateTime(date: string, time: string): string {
 
 /**
  * Build eventky.app URL for a specific event
- * Format: https://eventky.app/event/{userId}/{eventId}?instance={dtstart}
+ * Format: https://eventky.app/event/{userId}/{eventId}
  */
 export function buildEventUrl(
 	userId: string,
 	eventId: string,
-	dtstart: string,
 ): string {
-	const instanceParam = encodeURIComponent(dtstart);
-	return `${EVENTKY_APP_BASE}/event/${userId}/${eventId}?instance=${instanceParam}`;
+	return `${EVENTKY_APP_BASE}/event/${userId}/${eventId}`;
 }
 
 /**
