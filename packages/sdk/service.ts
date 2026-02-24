@@ -14,6 +14,8 @@ export interface ServiceDefinition {
 	description?: string; // optional - injected if omitted
 	/** NPM packages required by this service (must be in allowed list) */
 	npmDependencies?: string[];
+	/** Allowed network domains for sandbox (e.g. ["nominatim.openstreetmap.org"]) */
+	net?: string[];
 	/** JSON Schema for validating service config */
 	configSchema?: JSONSchema;
 	/** JSON Schemas for validating each named dataset */
@@ -34,6 +36,8 @@ export interface ServiceManifest {
 	schemaVersion: number;
 	/** NPM packages required by this service */
 	npmDependencies?: string[];
+	/** Allowed network domains for sandbox */
+	net?: string[];
 	/** JSON Schema for validating service config */
 	configSchema?: JSONSchema;
 	/** JSON Schemas for validating each named dataset */
@@ -68,6 +72,7 @@ export function defineService(def: ServiceDefinition): DefinedService {
 			description,
 			schemaVersion: SERVICE_SDK_SCHEMA_VERSION,
 			npmDependencies: def.npmDependencies,
+			net: def.net,
 			configSchema: def.configSchema,
 			datasetSchemas: def.datasetSchemas,
 		},

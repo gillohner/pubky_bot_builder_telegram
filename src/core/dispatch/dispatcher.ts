@@ -4,6 +4,7 @@ import { buildSnapshot } from "@core/snapshot/snapshot.ts";
 import { sandboxHost } from "@core/sandbox/host.ts";
 import { getServiceBundle } from "@core/config/store.ts";
 import { log } from "@core/util/logger.ts";
+import { pubkyWriter } from "@core/pubky/writer.ts";
 import {
 	applyStateDirective,
 	clearActiveFlow,
@@ -44,6 +45,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				serviceConfig: route.config,
 				routeMeta: route.meta,
 				datasets: route.datasets,
+				botPublicKey: pubkyWriter.getPublicKey() ?? undefined,
 			},
 			manifest: { schemaVersion: 1 },
 		};
@@ -57,8 +59,9 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			bundle.data_url,
 			payload as unknown as ExecutePayload,
 			{
-				timeoutMs: 2000,
+				timeoutMs: route.net ? 10000 : 2000,
 				hasNpm: bundle.has_npm === 1,
+				net: route.net,
 			},
 		);
 		if (!res.ok) {
@@ -148,6 +151,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				serviceConfig: route.config,
 				routeMeta: route.meta,
 				datasets: route.datasets,
+				botPublicKey: pubkyWriter.getPublicKey() ?? undefined,
 			},
 			manifest: { schemaVersion: 1 },
 		};
@@ -160,8 +164,9 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			bundle.data_url,
 			payload as unknown as ExecutePayload,
 			{
-				timeoutMs: 2000,
+				timeoutMs: route.net ? 10000 : 2000,
 				hasNpm: bundle.has_npm === 1,
+				net: route.net,
 			},
 		);
 		if (!res.ok) {
@@ -211,6 +216,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 						serviceConfig: route.config,
 						routeMeta: route.meta,
 						datasets: route.datasets,
+						botPublicKey: pubkyWriter.getPublicKey() ?? undefined,
 					},
 					manifest: { schemaVersion: 1 },
 				};
@@ -223,8 +229,9 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 					bundle.data_url,
 					payload as unknown as ExecutePayload,
 					{
-						timeoutMs: 2000,
+						timeoutMs: route.net ? 10000 : 2000,
 						hasNpm: bundle.has_npm === 1,
+						net: route.net,
 					},
 				);
 				if (!res.ok) {
@@ -263,6 +270,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 					serviceConfig: listener.config,
 					routeMeta: listener.meta,
 					datasets: listener.datasets,
+					botPublicKey: pubkyWriter.getPublicKey() ?? undefined,
 				},
 				manifest: { schemaVersion: 1 },
 			};
@@ -277,6 +285,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				{
 					timeoutMs: 1000,
 					hasNpm: bundle.has_npm === 1,
+					net: listener.net,
 				},
 			);
 			if (!res.ok) {

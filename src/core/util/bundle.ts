@@ -85,10 +85,10 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		// Map @eventky/ -> ./packages/eventky-specs/
 		return importPath.replace("@eventky/", "./packages/eventky-specs/");
 	}
-	if (importPath.startsWith("./")) {
+	if (importPath.startsWith("./") || importPath.startsWith("../")) {
 		// Relative import - resolve relative to the importing file's directory
 		const baseDir = basePath.substring(0, basePath.lastIndexOf("/"));
-		let resolved = `${baseDir}/${importPath.substring(2)}`;
+		let resolved = resolveRelativePath(baseDir, importPath);
 		if (!resolved.endsWith(".ts")) resolved += ".ts";
 		return resolved;
 	}
@@ -103,6 +103,22 @@ function resolveImportPath(importPath: string, basePath: string): string | null 
 		return null;
 	}
 	return null; // External import - not handled by bundler
+}
+
+// Resolve a relative path (including ../) against a base directory
+function resolveRelativePath(baseDir: string, relativePath: string): string {
+	const parts = baseDir.split("/").filter(Boolean);
+	const relParts = relativePath.split("/");
+	for (const seg of relParts) {
+		if (seg === "..") {
+			parts.pop();
+		} else if (seg !== "." && seg !== "") {
+			parts.push(seg);
+		}
+	}
+	const result = parts.join("/");
+	// Preserve leading ./ for project-relative paths
+	return result.startsWith("packages/") || result.startsWith("src/") ? "./" + result : result;
 }
 
 // Enhanced inliner that handles both @sdk imports and local relative imports
@@ -147,9 +163,9 @@ async function inlineAllImports(
 				continue;
 			}
 
-			// Prevent directory escape for security
-			if (importPath.includes("../")) {
-				log.warn("bundleService.security.escape", { entryPath, importPath });
+			// Prevent directory escape beyond project root
+			if (!absolutePath.startsWith(`${projectRoot}/`)) {
+				log.warn("bundleService.security.escape", { entryPath, importPath, absolutePath });
 				chunks.push(fullStatement); // Preserve original
 				continue;
 			}
