@@ -6,10 +6,11 @@ import { CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_LOCATION_PREFIX, CB_MENU_PREFIX 
 import { handleCalendarMenu, handleCalendarToggle } from "../flows/calendar.ts";
 import { handleEditField, handleEditMenu } from "../flows/edit.ts";
 import {
+	handleLocationBack,
+	handleLocationConfirm,
 	handleLocationSelect,
 	handleLocationTypeSelect,
 	handleUseAsName,
-	showLocationTypeMenu,
 } from "../flows/location.ts";
 import { handleOptionalMenuAction } from "../flows/optional_menu.ts";
 import { handleSubmit } from "../flows/submit.ts";
@@ -85,7 +86,11 @@ function handleLocationCallback(ev: CallbackEvent, data: string) {
 	const action = data.substring(CB_LOCATION_PREFIX.length);
 
 	if (action === "back") {
-		return handleOptionalMenuAction(ev, "back");
+		return handleLocationBack(ev);
+	}
+
+	if (action === "confirm") {
+		return handleLocationConfirm(ev);
 	}
 
 	if (action.startsWith("type:")) {
@@ -100,7 +105,7 @@ function handleLocationCallback(ev: CallbackEvent, data: string) {
 		return handleUseAsName(ev);
 	}
 
-	return handleOptionalMenuAction(ev, "back");
+	return handleLocationBack(ev);
 }
 
 function handleEditCallback(ev: CallbackEvent, data: string) {

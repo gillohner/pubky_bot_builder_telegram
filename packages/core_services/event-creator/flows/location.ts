@@ -1,15 +1,14 @@
 // packages/core_services/event-creator/flows/location.ts
-// Location selection flow with Nominatim geocoding and online meeting support
+// Location selection flow with Nominatim geocoding, confirmation, and message cleanup
 
 import {
 	type CallbackEvent,
 	type MessageEvent,
-	reply,
 	state,
 	UIBuilder,
 	uiKeyboard,
 } from "@sdk/mod.ts";
-import { SERVICE_ID } from "../constants.ts";
+import { LOC_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
 import { showOptionalMenu } from "./optional_menu.ts";
 import { validateLocationName } from "../utils/validation.ts";
@@ -38,6 +37,7 @@ export function showLocationTypeMenu(st: EventCreatorState) {
 
 	return uiKeyboard(keyboard.build(), "📍 *Add Location*\n\nWhat type of location?", {
 		state: state.replace(st),
+		options: { replaceGroup: LOC_REPLACE_GROUP },
 	});
 }
 
@@ -48,7 +48,12 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 	const st = (ev.state ?? {}) as EventCreatorState;
 
 	if (locationType === "physical") {
-		return reply(
+		const keyboard = UIBuilder.keyboard()
+			.namespace(SERVICE_ID)
+			.callback("← Cancel", "location:back");
+
+		return uiKeyboard(
+			keyboard.build(),
 			"📍 *Physical Location*\n\n" +
 				'Enter the venue name or address to search (or type "skip" to cancel):',
 			{
@@ -56,12 +61,18 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 					...st,
 					waitingFor: "location_search",
 				}),
+				options: { replaceGroup: LOC_REPLACE_GROUP },
 			},
 		);
 	}
 
 	if (locationType === "online") {
-		return reply(
+		const keyboard = UIBuilder.keyboard()
+			.namespace(SERVICE_ID)
+			.callback("← Cancel", "location:back");
+
+		return uiKeyboard(
+			keyboard.build(),
 			"💻 *Online Meeting*\n\n" +
 				'Enter the meeting URL (e.g., https://meet.google.com/... or https://zoom.us/...)\n\n' +
 				'Or type "skip" to cancel:',
@@ -70,11 +81,46 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 					...st,
 					waitingFor: "location_online_url",
 				}),
+				options: { replaceGroup: LOC_REPLACE_GROUP },
 			},
 		);
 	}
 
 	return showLocationTypeMenu(st);
+}
+
+/**
+ * Show confirmation after location selection
+ */
+function showLocationConfirmation(st: EventCreatorState) {
+	const loc = st.location!;
+	const isOnline = loc.location_type === "ONLINE";
+	const retryAction = isOnline ? "location:type:online" : "location:type:physical";
+
+	const keyboard = UIBuilder.keyboard()
+		.namespace(SERVICE_ID)
+		.callback("✅ Confirm", "location:confirm")
+		.row()
+		.callback("🔍 Search Again", retryAction)
+		.row()
+		.callback("← Back to Menu", "location:back");
+
+	let text: string;
+	if (isOnline) {
+		text = `💻 *Online Meeting Selected*\n\n*URL:* ${loc.structured_data}`;
+	} else {
+		text = `📍 *Location Selected*\n\n*Name:* ${loc.name}`;
+		if (loc.structured_data) text += `\n🔗 [OpenStreetMap](${loc.structured_data})`;
+		if (loc.lat != null && loc.lng != null) {
+			text += `\n📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+		}
+	}
+	text += "\n\nConfirm this location?";
+
+	return uiKeyboard(keyboard.build(), text, {
+		state: state.replace(st),
+		options: { replaceGroup: LOC_REPLACE_GROUP },
+	});
 }
 
 /**
@@ -86,8 +132,15 @@ export function handleLocationSelect(ev: CallbackEvent, index: string) {
 
 	const idx = parseInt(index, 10);
 	if (!results || isNaN(idx) || idx < 0 || idx >= results.length) {
-		return reply("Invalid selection. Please try again.", {
+		const keyboard = UIBuilder.keyboard()
+			.namespace(SERVICE_ID)
+			.callback("🔍 Search Again", "location:type:physical")
+			.row()
+			.callback("← Back to Menu", "location:back");
+
+		return uiKeyboard(keyboard.build(), "Invalid selection. Please try again.", {
 			state: state.replace(st),
+			options: { replaceGroup: LOC_REPLACE_GROUP },
 		});
 	}
 
@@ -103,9 +156,8 @@ export function handleLocationSelect(ev: CallbackEvent, index: string) {
 		lng: parseFloat(selected.lon),
 	};
 	delete (updatedState as Record<string, unknown>).waitingFor;
-	delete (updatedState as Record<string, unknown>)._nominatimResults;
 
-	return showOptionalMenu(updatedState, ev);
+	return showLocationConfirmation(updatedState);
 }
 
 /**
@@ -114,11 +166,18 @@ export function handleLocationSelect(ev: CallbackEvent, index: string) {
 export async function handleLocationSearchInput(
 	text: string,
 	st: EventCreatorState,
-	ev: MessageEvent,
+	_ev: MessageEvent,
 ) {
 	const validation = validateLocationName(text);
 	if (!validation.valid) {
-		return reply(validation.error!);
+		const keyboard = UIBuilder.keyboard()
+			.namespace(SERVICE_ID)
+			.callback("← Cancel", "location:back");
+
+		return uiKeyboard(keyboard.build(), validation.error!, {
+			state: state.replace(st),
+			options: { replaceGroup: LOC_REPLACE_GROUP },
+		});
 	}
 
 	// Query Nominatim
@@ -162,6 +221,8 @@ export async function handleLocationSearchInput(
 				`📍 No results found for "${text}".\n\nYou can use it as a plain location name or search again.`,
 				{
 					state: state.replace(updatedState),
+					options: { replaceGroup: LOC_REPLACE_GROUP },
+					deleteTrigger: true,
 				},
 			);
 		}
@@ -194,9 +255,11 @@ export async function handleLocationSearchInput(
 			`📍 *Search Results* for "${text}"\n\nSelect a location:`,
 			{
 				state: state.replace(updatedState),
+				options: { replaceGroup: LOC_REPLACE_GROUP },
+				deleteTrigger: true,
 			},
 		);
-	} catch (err) {
+	} catch (_err) {
 		// Nominatim failed — fall back to using the text as plain name
 		const updatedState = { ...st };
 		updatedState.location = {
@@ -204,8 +267,10 @@ export async function handleLocationSearchInput(
 			location_type: "PHYSICAL",
 		};
 		delete (updatedState as Record<string, unknown>).waitingFor;
+		delete (updatedState as Record<string, unknown>)._nominatimResults;
+		delete (updatedState as Record<string, unknown>)._pendingLocationName;
 
-		return showOptionalMenu(updatedState, ev);
+		return showOptionalMenu(updatedState, _ev, { cleanupGroup: LOC_REPLACE_GROUP });
 	}
 }
 
@@ -226,10 +291,38 @@ export function handleUseAsName(ev: CallbackEvent) {
 		location_type: "PHYSICAL",
 	};
 	delete (updatedState as Record<string, unknown>).waitingFor;
-	delete (updatedState as Record<string, unknown>)._nominatimResults;
-	delete (updatedState as Record<string, unknown>)._pendingLocationName;
 
-	return showOptionalMenu(updatedState, ev);
+	return showLocationConfirmation(updatedState);
+}
+
+/**
+ * Handle location confirmation — accept and return to optional menu
+ */
+export function handleLocationConfirm(ev: CallbackEvent) {
+	const st = (ev.state ?? {}) as EventCreatorState;
+
+	// Clean temp fields
+	const cleaned = { ...st };
+	delete (cleaned as Record<string, unknown>)._nominatimResults;
+	delete (cleaned as Record<string, unknown>)._pendingLocationName;
+	delete (cleaned as Record<string, unknown>).waitingFor;
+
+	return showOptionalMenu(cleaned, ev, { cleanupGroup: LOC_REPLACE_GROUP });
+}
+
+/**
+ * Handle location back — clean up and return to optional menu
+ */
+export function handleLocationBack(ev: CallbackEvent) {
+	const st = (ev.state ?? {}) as EventCreatorState;
+
+	// Clean temp fields
+	const cleaned = { ...st };
+	delete (cleaned as Record<string, unknown>)._nominatimResults;
+	delete (cleaned as Record<string, unknown>)._pendingLocationName;
+	delete (cleaned as Record<string, unknown>).waitingFor;
+
+	return showOptionalMenu(cleaned, ev, { cleanupGroup: LOC_REPLACE_GROUP });
 }
 
 /**
@@ -238,16 +331,38 @@ export function handleUseAsName(ev: CallbackEvent) {
 export function handleOnlineUrlInput(
 	text: string,
 	st: EventCreatorState,
-	ev: MessageEvent,
+	_ev: MessageEvent,
 ) {
 	// Basic URL validation
 	try {
 		const url = new URL(text);
 		if (!url.protocol.startsWith("http")) {
-			return reply("Please enter a valid URL starting with http:// or https://");
+			const keyboard = UIBuilder.keyboard()
+				.namespace(SERVICE_ID)
+				.callback("← Cancel", "location:back");
+
+			return uiKeyboard(
+				keyboard.build(),
+				"Please enter a valid URL starting with http:// or https://",
+				{
+					state: state.replace(st),
+					options: { replaceGroup: LOC_REPLACE_GROUP },
+				},
+			);
 		}
 	} catch {
-		return reply("That doesn't look like a valid URL. Please enter a meeting link:");
+		const keyboard = UIBuilder.keyboard()
+			.namespace(SERVICE_ID)
+			.callback("← Cancel", "location:back");
+
+		return uiKeyboard(
+			keyboard.build(),
+			"That doesn't look like a valid URL. Please enter a meeting link:",
+			{
+				state: state.replace(st),
+				options: { replaceGroup: LOC_REPLACE_GROUP },
+			},
+		);
 	}
 
 	const updatedState = { ...st };
@@ -258,5 +373,5 @@ export function handleOnlineUrlInput(
 	};
 	delete (updatedState as Record<string, unknown>).waitingFor;
 
-	return showOptionalMenu(updatedState, ev);
+	return showLocationConfirmation(updatedState);
 }

@@ -176,7 +176,10 @@ export async function buildSnapshot(
 		}
 	}
 	// Helper to dynamically import a service module and extract manifest (placeholders become runtime-injected values)
-	async function loadMeta(entry: string, command: string): Promise<RouteMeta> {
+	async function loadMeta(
+		entry: string,
+		command: string,
+	): Promise<RouteMeta & { net?: string[] }> {
 		try {
 			// Resolve entry path relative to CWD (project root), not relative to this module
 			const absoluteEntry = entry.startsWith("./")
@@ -184,7 +187,7 @@ export async function buildSnapshot(
 				: entry;
 			const mod = await import(`${absoluteEntry}?metaBust=${crypto.randomUUID()}`);
 			const svc = mod.default as {
-				manifest?: { id?: string; command?: string; description?: string };
+				manifest?: { id?: string; command?: string; description?: string; net?: string[] };
 			};
 			if (svc?.manifest) {
 				const SENTINELS = new Set(["__runtime__", "__auto__"]);
@@ -195,7 +198,8 @@ export async function buildSnapshot(
 				const desc = svc.manifest.description && !SENTINELS.has(svc.manifest.description)
 					? svc.manifest.description
 					: undefined;
-				return { id, command: cmd, description: desc };
+				const net = svc.manifest.net;
+				return { id, command: cmd, description: desc, net };
 			}
 			log.warn("snapshot.loadMeta.no_manifest", { entry, command });
 		} catch (err) {
@@ -239,7 +243,7 @@ export async function buildSnapshot(
 			config: svc.config,
 			meta,
 			datasets,
-			// datasets placeholder (future resolution): service-level datasets can be attached here
+			net: meta.net,
 		};
 	}
 	const listenerRoutes: ListenerRoute[] = [];
@@ -251,6 +255,7 @@ export async function buildSnapshot(
 			kind: "listener",
 			bundleHash: bundle.bundleHash,
 			meta,
+			net: meta.net,
 		});
 	}
 

@@ -33,8 +33,8 @@ export class SandboxHost {
 			const filtered = list.filter((v) => v && v !== "*" && v !== "<all>");
 			return filtered.length ? filtered : undefined;
 		}
-		const _net = sanitizeList(caps.net)?.slice(0, 5);
-		// Run with no permissions; also disable remote network module fetching to block dynamic remote imports
+		const net = sanitizeList(caps.net)?.slice(0, 5);
+		// Run with minimal permissions; also disable remote network module fetching to block dynamic remote imports
 		// This enforces that example services must be fully local. If a service attempts to import a remote URL,
 		// it will fail and we capture the error in the sandbox result.
 		const args: string[] = [
@@ -51,6 +51,11 @@ export class SandboxHost {
 			const cacheDir = getDenoCacheDir();
 			// Allow reading from cache dir (for npm packages) and /tmp (for bundle file)
 			args.push(`--allow-read=${cacheDir},/tmp`);
+		}
+
+		// Allow network access to specific domains declared by the service
+		if (net) {
+			args.push(`--allow-net=${net.join(",")}`);
 		}
 
 		args.push(entry);

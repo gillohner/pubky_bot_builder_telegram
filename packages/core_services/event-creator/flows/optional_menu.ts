@@ -16,7 +16,11 @@ import { buildEventSummary } from "../utils/preview.ts";
 import { validateDescription, validateLocationName } from "../utils/validation.ts";
 import { handleLocationSearchInput, handleOnlineUrlInput, showLocationTypeMenu } from "./location.ts";
 
-export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | MessageEvent) {
+export function showOptionalMenu(
+	st: EventCreatorState,
+	ev: CallbackEvent | MessageEvent,
+	extraOpts?: Record<string, unknown>,
+) {
 	const config = (ev.serviceConfig ?? {}) as EventCreatorConfig;
 
 	const reqMark = (field: string) => {
@@ -56,6 +60,7 @@ export function showOptionalMenu(st: EventCreatorState, ev: CallbackEvent | Mess
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
+		options: extraOpts,
 	});
 }
 

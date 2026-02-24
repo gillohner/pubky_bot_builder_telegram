@@ -21,6 +21,7 @@ const service = defineService({
 	kind: SERVICE_KIND,
 	description:
 		"Creates events on Pubky with admin approval, image uploads, and multi-calendar support",
+	net: ["nominatim.openstreetmap.org"],
 	configSchema: EVENT_CREATOR_CONFIG_SCHEMA,
 	datasetSchemas: EVENT_CREATOR_DATASET_SCHEMAS,
 

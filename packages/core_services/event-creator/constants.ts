@@ -35,6 +35,7 @@ export const CB_MENU_PREFIX = "menu:";
 export const CB_CALENDAR_PREFIX = "calendar:";
 export const CB_EDIT_PREFIX = "edit:";
 export const CB_LOCATION_PREFIX = "location:";
+export const LOC_REPLACE_GROUP = "ec_location";
 
 // Default templates
 export const DEFAULT_RETURN_TEMPLATE =
