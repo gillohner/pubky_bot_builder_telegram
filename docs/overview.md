@@ -23,8 +23,8 @@ flowchart TB
     end
     
     subgraph Services["Services"]
-        S1[Hello Service]
-        S2[Survey Flow]
+        S1[Simple Response]
+        S2[Help Service]
         S3[Links Service]
         S4[Event Creator]
     end
@@ -461,20 +461,17 @@ Configuration defines which services are available:
 	"configId": "my_config",
 	"services": [
 		{
-			"name": "Hello",
+			"name": "Simple Response",
 			"command": "hello",
 			"kind": "single_command",
-			"entry": "./packages/demo_services/hello/service.ts",
+			"entry": "./packages/core_services/simple-response/service.ts",
 			"version": "1.0.0"
 		},
 		{
-			"name": "Survey",
-			"command": "survey",
-			"kind": "command_flow",
-			"entry": "./packages/demo_services/survey/service.ts",
-			"config": {
-				"custom_option": true
-			}
+			"name": "Help",
+			"command": "help",
+			"kind": "single_command",
+			"entry": "./packages/core_services/help/service.ts"
 		}
 	],
 	"listeners": []
@@ -499,18 +496,18 @@ Services can access external data through datasets:
 
 ```json
 {
-	"name": "UI Demo",
-	"command": "ui",
-	"entry": "./packages/demo_services/ui_demo/service.ts",
+	"name": "Links",
+	"command": "links",
+	"entry": "./packages/core_services/links/service.ts",
 	"config": {
 		"datasets": {
-			"carousel": "pubky://user/pub/app/datasets/carousel.json"
+			"links": "pubky://user/pub/app/datasets/links.json"
 		}
 	}
 }
 ```
 
-In the service, access via `ev.datasets.carousel`.
+In the service, access via `ev.datasets.links`.
 
 ### Environment Variables
 
@@ -602,7 +599,7 @@ pubky_bot_builder_telegram/
 │       └── telegram/       # Telegram-specific adapters
 ├── packages/
 │   ├── sdk/                # Service SDK
-│   └── demo_services/      # Example services
+│   └── core_services/      # Core services
 └── docs/                   # Documentation
 ```
 
@@ -610,4 +607,4 @@ pubky_bot_builder_telegram/
 
 - See [services.md](services.md) for detailed service development guide
 - See [configuration.md](configuration.md) for advanced configuration options
-- Check `packages/demo_services/` for working examples
+- Check `packages/core_services/` for working examples

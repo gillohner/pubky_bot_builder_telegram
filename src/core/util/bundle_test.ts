@@ -2,8 +2,8 @@
 import { assert, assertStringIncludes } from "jsr:@std/assert@1";
 import { bundleService } from "./bundle.ts";
 
-// Use one real example service (hello) which imports @sdk/mod.ts implicitly
-const SERVICE_PATH = "./packages/demo_services/hello/service.ts";
+// Use one real service (simple-response) which imports @sdk/mod.ts implicitly
+const SERVICE_PATH = "./packages/core_services/simple-response/service.ts";
 // SDK runtime path no longer passed explicitly; bundler auto-detects SDK via imports.
 
 Deno.test("bundleService() inlines sdk markers", async () => {

@@ -2,56 +2,49 @@
 	"configId": "test",
 	"services": [
 		{
-			"name": "Hello",
+			"name": "Help",
+			"command": "help",
+			"kind": "single_command",
+			"entry": "./packages/core_services/help/service.ts",
+			"version": "1.0.0"
+		},
+		{
+			"name": "Simple Response",
 			"command": "hello",
 			"kind": "single_command",
-			"entry": "./packages/demo_services/hello/service.ts",
-			"version": "1.0.0"
+			"entry": "./packages/core_services/simple-response/service.ts",
+			"version": "1.0.0",
+			"config": { "message": "Hello! I'm a Pubky bot." }
 		},
 		{
 			"name": "Links",
 			"command": "links",
-			"kind": "single_command",
-			"entry": "./packages/demo_services/links/service.ts"
-		},
-		{
-			"name": "Link Cleaner",
-			"command": "clean",
 			"kind": "command_flow",
-			"entry": "./packages/demo_services/link_cleaner/service.ts"
+			"entry": "./packages/core_services/links/service.ts"
 		},
 		{
-			"name": "Survey",
-			"command": "survey",
+			"name": "Event Creator",
+			"command": "newevent",
 			"kind": "command_flow",
-			"entry": "./packages/demo_services/survey/service.ts"
-		},
-		{
-			"name": "Security Probe",
-			"command": "secprobe",
-			"kind": "single_command",
-			"entry": "./packages/demo_services/security_probe/service.ts",
+			"entry": "./packages/core_services/event-creator/service.ts",
 			"config": {
-				"admin_only": true
+				"defaultTimezone": "UTC",
+				"requireLocation": false
 			}
+		}
+	],
+	"listeners": [
+		{
+			"name": "Trigger Words",
+			"command": "triggerwords",
+			"kind": "listener",
+			"entry": "./packages/core_services/triggerwords/service.ts"
 		},
 		{
-			"name": "Media Demo",
-			"command": "media",
-			"kind": "command_flow",
-			"entry": "./packages/demo_services/media_demo/service.ts"
-		},
-		{
-			"name": "UI Demo",
-			"command": "ui",
-			"kind": "command_flow",
-			"entry": "./packages/demo_services/ui_demo/service.ts",
-			"config": {
-				"datasets": {
-					"carousel": "pubky://demo/pub/pubky-bot-builder/datasets/0000000000100",
-					"broken": "pubky://demo/pub/pubky-bot-builder/datasets/0000000000999"
-				}
-			}
+			"name": "URL Cleaner",
+			"command": "url_cleaner",
+			"kind": "listener",
+			"entry": "./packages/core_services/url-cleaner/service.ts"
 		}
 	]
 }

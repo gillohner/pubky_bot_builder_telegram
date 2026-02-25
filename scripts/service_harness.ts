@@ -1,7 +1,7 @@
 // scripts/service_harness.ts
 // Interactive harness to develop & debug a single service in isolation.
 // Usage:
-//   deno run -A scripts/service_harness.ts ./packages/demo_services/hello/service.ts
+//   deno run -A scripts/service_harness.ts ./packages/core_services/simple-response/service.ts
 // Then type commands:
 //   /hello            -> simulates command event (leading slash optional)
 //   cb:<data>         -> simulates callback payload (post-dispatch payload, e.g. 'audio')

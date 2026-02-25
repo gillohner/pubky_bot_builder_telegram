@@ -87,15 +87,15 @@ packages/
 │   ├── i18n.ts                # Internationalization
 │   ├── runner.ts              # runService() — sandbox entry point (stdin→stdout)
 │   └── schema.ts              # JSON Schema validation types
-├── demo_services/             # Example services (hello, survey, links, listener, etc.)
 ├── core_services/             # Production services
-│   └── event-creator/         # Eventky event creation with multi-step flow
-│       ├── mod.ts             # Service entry point (defineService)
-│       ├── handlers/          # Command, callback, message handlers
-│       ├── flows/             # Optional menu, calendar, location, edit, submit
-│       ├── utils/             # Calendar, validation, preview, URL builders
-│       ├── constants.ts       # Service ID, schemas, validation, replace groups
-│       └── types.ts           # EventCreatorState, EventCreatorConfig
+│   ├── event-creator/         # Eventky event creation with multi-step flow
+│   ├── help/                  # Configurable help message with command list
+│   ├── links/                 # Categorized links with inline keyboard navigation
+│   ├── meetups/               # Display upcoming events from Pubky calendars
+│   ├── new-member/            # Welcome new group members
+│   ├── simple-response/       # Responds with a configured message
+│   ├── triggerwords/          # Responds to trigger words in messages
+│   └── url-cleaner/           # Cleans tracking params and suggests alt frontends
 └── eventky-specs/             # Local implementation of eventky data utilities
     └── mod.ts                 # URI builders, ID generation, validation, types
 ```

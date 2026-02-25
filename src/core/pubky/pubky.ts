@@ -80,53 +80,25 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 		configId: "default",
 		services: [
 			{
-				name: "Hello",
+				name: "Help",
+				command: "help",
+				kind: "single_command",
+				entry: "./packages/core_services/help/service.ts",
+				version: "1.0.0",
+			},
+			{
+				name: "Simple Response",
 				command: "hello",
 				kind: "single_command",
-				entry: "./packages/demo_services/hello/service.ts",
+				entry: "./packages/core_services/simple-response/service.ts",
 				version: "1.0.0",
+				config: { message: "Hello! I'm a Pubky bot." },
 			},
 			{
 				name: "Links",
 				command: "links",
-				kind: "single_command",
-				entry: "./packages/demo_services/links/service.ts",
-			},
-			{
-				name: "Survey",
-				command: "survey",
 				kind: "command_flow",
-				entry: "./packages/demo_services/survey/service.ts",
-			},
-			{
-				name: "Security Probe",
-				command: "secprobe",
-				kind: "single_command",
-				entry: "./packages/demo_services/security_probe/service.ts",
-				config: { admin_only: true },
-			},
-			{
-				name: "Media Demo",
-				command: "media",
-				kind: "command_flow",
-				entry: "./packages/demo_services/media_demo/service.ts",
-				config: {
-					datasets: {
-						gallery: "pubky://demo/pub/pubky-bot-builder/datasets/gallery.json",
-					},
-				},
-			},
-			{
-				name: "UI Demo",
-				command: "ui",
-				kind: "command_flow",
-				entry: "./packages/demo_services/ui_demo/service.ts",
-				config: {
-					datasets: {
-						carousel: "pubky://demo/pub/pubky-bot-builder/datasets/carousel.json",
-						broken: "pubky://demo/pub/pubky-bot-builder/datasets/broken.json",
-					},
-				},
+				entry: "./packages/core_services/links/service.ts",
 			},
 			{
 				name: "Event Creator",
@@ -136,7 +108,6 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 				serviceId: "event_creator",
 				net: ["nominatim.openstreetmap.org"],
 				config: {
-					// calendarUri: "pubky://your-pk/pub/eventky.app/calendars/your-calendar-id",
 					defaultTimezone: "UTC",
 					requireLocation: false,
 				},
@@ -144,23 +115,28 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 		],
 		listeners: [
 			{
-				name: "Listener",
-				command: "listener",
+				name: "Trigger Words",
+				command: "triggerwords",
 				kind: "listener",
-				entry: "./packages/demo_services/listener/service.ts",
+				entry: "./packages/core_services/triggerwords/service.ts",
+			},
+			{
+				name: "URL Cleaner",
+				command: "url_cleaner",
+				kind: "listener",
+				entry: "./packages/core_services/url-cleaner/service.ts",
 			},
 		],
 	},
-	// Example of new modular config structure
 	modular: {
 		configId: "modular",
 		services: [
 			{
-				name: "Hello (from modular)",
+				name: "Simple Response (from modular)",
 				command: "hello",
 				kind: "single_command",
-				entry: "./packages/demo_services/hello/service.ts",
-				config: { greeting: "Modular hello!" },
+				entry: "./packages/core_services/simple-response/service.ts",
+				config: { message: "Modular hello!" },
 			},
 		],
 		listeners: [],
@@ -169,59 +145,29 @@ const TEMPLATES: Record<string, PubkyBotConfigTemplate> = {
 		configId: "fake",
 		services: [
 			{
-				name: "Fake Hello",
+				name: "Simple Response",
 				command: "hello",
 				kind: "single_command",
-				entry: "./packages/demo_services/hello/service.ts",
-				config: { greeting: "FAKE template override!" },
+				entry: "./packages/core_services/simple-response/service.ts",
+				config: { message: "FAKE template override!" },
 				version: "1.0.0",
 				source: "local",
 			},
 			{
 				name: "Links",
 				command: "links",
-				kind: "single_command",
-				entry: "./packages/demo_services/links/service.ts",
-			},
-			{
-				name: "Security Probe",
-				command: "secprobe",
-				kind: "single_command",
-				entry: "./packages/demo_services/security_probe/service.ts",
-			},
-			{
-				name: "UI Demo",
-				command: "ui",
 				kind: "command_flow",
-				entry: "./packages/demo_services/ui_demo/service.ts",
-			},
-			{
-				name: "Media Demo",
-				command: "mediatest",
-				kind: "command_flow",
-				entry: "./packages/demo_services/media_demo/service.ts",
+				entry: "./packages/core_services/links/service.ts",
 			},
 		],
 		listeners: [
 			{
-				name: "Listener",
-				command: "listener",
+				name: "Trigger Words",
+				command: "triggerwords",
 				kind: "listener",
-				entry: "./packages/demo_services/listener/service.ts",
+				entry: "./packages/core_services/triggerwords/service.ts",
 			},
 		],
-	},
-	bad: {
-		configId: "bad",
-		services: [
-			{
-				name: "Bad Dataset",
-				command: "baddata",
-				kind: "single_command",
-				entry: "./packages/demo_services/bad_dataset/service.ts",
-			},
-		],
-		listeners: [],
 	},
 };
 

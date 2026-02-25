@@ -86,10 +86,10 @@ Configuration templates define which services are available to the bot. The bot 
 	"configId": "minimal",
 	"services": [
 		{
-			"name": "Hello",
+			"name": "Simple Response",
 			"command": "hello",
 			"kind": "single_command",
-			"entry": "./packages/demo_services/hello/service.ts"
+			"entry": "./packages/core_services/simple-response/service.ts"
 		}
 	]
 }
@@ -102,46 +102,35 @@ Configuration templates define which services are available to the bot. The bot 
 	"configId": "full_featured",
 	"services": [
 		{
-			"name": "Greeting Bot",
+			"name": "Simple Response",
 			"command": "hello",
 			"kind": "single_command",
-			"entry": "./packages/demo_services/hello/service.ts",
+			"entry": "./packages/core_services/simple-response/service.ts",
 			"version": "1.0.0",
 			"config": {
 				"greeting": "Welcome to our bot!"
 			}
 		},
 		{
-			"name": "User Survey",
-			"command": "survey",
-			"kind": "command_flow",
-			"entry": "./packages/demo_services/survey/service.ts",
-			"version": "2.0.0"
+			"name": "Help",
+			"command": "help",
+			"kind": "single_command",
+			"entry": "./packages/core_services/help/service.ts",
+			"version": "1.0.0"
 		},
 		{
 			"name": "Resource Links",
 			"command": "links",
 			"kind": "single_command",
-			"entry": "./packages/demo_services/links/service.ts"
-		},
-		{
-			"name": "UI Showcase",
-			"command": "ui",
-			"kind": "command_flow",
-			"entry": "./packages/demo_services/ui_demo/service.ts",
-			"config": {
-				"datasets": {
-					"carousel": "./packages/demo_services/ui_demo/datasets/carousel.json"
-				}
-			}
+			"entry": "./packages/core_services/links/service.ts"
 		}
 	],
 	"listeners": [
 		{
-			"name": "Message Logger",
-			"command": "logger",
+			"name": "Trigger Words",
+			"command": "triggerwords",
 			"kind": "listener",
-			"entry": "./my_services/logger/service.ts"
+			"entry": "./packages/core_services/triggerwords/service.ts"
 		}
 	]
 }
@@ -261,13 +250,12 @@ The bot includes these built-in templates:
 
 ### `default`
 
-Standard demo configuration with all example services:
+Standard configuration with core services:
 
-- `/hello` - Simple greeting
+- `/hello` - Simple response greeting
+- `/help` - Help information
 - `/links` - Categorized links
-- `/survey` - Multi-step survey
-- `/media` - Media handling demo
-- `/ui` - UI components demo
+- Trigger words listener - Auto-responds to configured keywords
 
 ### Creating Custom Templates
 
