@@ -15,7 +15,7 @@ export interface JSONSchemaString {
     minLength?: number;
     maxLength?: number;
     pattern?: string;
-    format?: "uri" | "email" | "date" | "date-time" | "uri-reference";
+    format?: "uri" | "email" | "date" | "date-time" | "uri-reference" | "textarea";
 }
 
 export interface JSONSchemaNumber {

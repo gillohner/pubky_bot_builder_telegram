@@ -13,7 +13,7 @@ A Deno-based Telegram bot framework with sandboxed service execution and Pubky d
 - **Testing:** `deno test`
 - **Dev:** `deno task dev` (polling mode with --watch)
 - **Prod:** `deno task serve` (webhook mode)
-- **Fresh start:** Delete `bot.sqlite` to force snapshot/bundle rebuild
+- **Fresh start:** Snapshots auto-clear on restart; `/updateconfig` re-fetches from homeserver. Deleting `bot.sqlite` is rarely needed.
 
 ## Architecture
 
@@ -138,8 +138,10 @@ Services run in Deno subprocesses with **zero permissions by default**:
 ### Snapshot System
 Routing snapshots map commands → service bundles. Three-layer cache:
 1. In-memory (10s TTL per chatId)
-2. SQLite (keyed by config hash)
+2. SQLite (keyed by config hash) — **cleared on every process startup** (`clearAllSnapshots()` in `bot.ts`)
 3. Content-addressed bundles (SHA-256 deduplication)
+
+On startup, all persisted snapshots are wiped so the first request triggers a fresh build. This means code changes (via `--watch`) and homeserver config changes are always picked up without needing to delete `bot.sqlite` or call `/updateconfig`. Use `/updateconfig` only to pick up config changes without restarting the bot.
 
 ### State Management
 - Scope: `(chatId, userId, serviceId)` — in-memory only, lost on restart
@@ -152,7 +154,14 @@ Services can call `pubkyWrite(path, data, preview)` to write to Pubky homeserver
 - Admin reacts to approve/reject; timeout after `PUBKY_APPROVAL_TIMEOUT` (default 24h)
 - Writer loads keypair from recovery file, strips "pubky" prefix from `publicKey.toString()`
 - Handles Telegram image downloads → blob upload → file record → event write
+- **Blob IDs use BLAKE3** (not SHA-256) per pubky-app-specs: `BLAKE3(content) → first 16 bytes → Crockford Base32`. Uses `@noble/hashes/blake3`.
 - URIs follow pubky-app-specs format: `pubky://<z32_pk>/pub/<app>/<resource>/<id>`
+
+### Admin Permissions
+- `BOT_ADMIN_IDS` — comma-separated Telegram user IDs, always admin in any chat
+- `LOCK_DM_CONFIG` — when `1`, only `BOT_ADMIN_IDS` can `/setconfig` in DMs; when `0` (default), any DM user is admin
+- In groups: Telegram chat admins + `BOT_ADMIN_IDS` can use admin commands
+- Admin check logic lives in `src/middleware/admin.ts`
 
 ### Configuration Templates
 Bot configs define which services are active per chat. Sources:
@@ -166,8 +175,8 @@ Modular config resolution (`resolveModularBotConfig` in `pubky.ts`):
 1. Fetches bot config from Pubky URL
 2. Resolves each `ServiceReference.serviceConfigRef` → fetches service config
 3. Merges overrides (command, config, datasets)
-4. Enriches calendar names from Pubky homeserver
-5. Normalizes calendar URIs to correct format
+4. Normalizes calendars — converts plain URI strings to `{ uri }` objects, normalizes malformed URIs
+5. Enriches calendar names by fetching from Pubky homeserver (for any calendar missing a `name` field)
 6. Returns combined services + listeners for snapshot building
 
 ## SQLite Tables
@@ -186,9 +195,11 @@ NODE_ENV                   # development | production
 DEBUG                      # 0 | 1
 LOG_MIN_LEVEL              # debug | info | warn | error
 LOG_PRETTY                 # 0 | 1
-DEFAULT_TEMPLATE_ID        # Config template (default: "default")
+DEFAULT_TEMPLATE_ID        # Config template or pubky:// URL (default: "default")
 WEBHOOK                    # 0 (polling) | 1 (webhook)
 LOCAL_DB_URL               # SQLite path (default: ./bot.sqlite)
+BOT_ADMIN_IDS              # Comma-separated Telegram user IDs (super-admins everywhere)
+LOCK_DM_CONFIG             # 1 = lock DM config to DEFAULT_TEMPLATE_ID, 0 = open (default)
 PUBKY_RECOVERY_FILE        # Path to .pkarr keypair file
 PUBKY_PASSPHRASE           # Passphrase for keypair
 PUBKY_ADMIN_GROUP          # Telegram group ID for write approvals
@@ -205,7 +216,8 @@ The **Pubky Bot Configurator** (`../pubky_bot_configurator/`) is a Next.js web U
 
 The bundler inlines all imports (SDK, eventky-specs, relative paths) into a single file for sandbox:
 
-- **Import resolution:** Handles `@sdk/`, `@eventky/`, `./`, `../` imports recursively
+- **Import resolution:** Handles `@sdk/`, `@eventky/`, `./`, `../` imports recursively via regex on static `import`/`export` statements
+- **Dynamic `import()` NOT supported:** The bundler only processes static imports. Dynamic `await import("../path")` is left untouched in the bundle — at runtime it resolves relative to `/tmp` and fails with `Module not found`. **Always use static imports in services.**
 - **Relative path resolution:** `resolveRelativePath()` handles `../` by walking the path segments; preserves leading `/` for absolute paths
 - **Output:** All services (npm and non-npm) written to temp files in `/tmp` (not data URLs — OS ARG_MAX limit)
 - **npm handling:** Uses `deno cache` to pre-fetch allowed npm modules; subprocess gets minimal env to avoid ARG_MAX
@@ -240,6 +252,8 @@ state.clear()       — Erase state, end flow
 ### Important
 - `reply()` only passes `options`, `state`, `deleteTrigger`, `ttl` — spreading `uiKeyboard()` result into reply opts silently drops the keyboard. Always use `uiKeyboard(kb, msg, { state })` directly.
 - **Telegram Markdown v1:** Use `*bold*` (single asterisk), NOT `**bold**`. Adapter hardcodes `parse_mode: "Markdown"`.
+- **Image uploads:** Telegram sends compressed images as `message.photo` (array of sizes) and uncompressed/file images as `message.document` with `mime_type: "image/*"`. Services must check both properties.
+- **Date validation in flows:** When collecting end date/time, validate end date >= start date immediately at input (not just at final end-time validation). Otherwise users get stuck in an unrecoverable loop where any end time is rejected.
 
 ## Pubky URI Formats
 
@@ -256,11 +270,11 @@ The public key is a 52-character z-base-32 string (NO "pubky" prefix). `keypair.
 ## Development Notes
 
 - Always use `deno fmt` before committing (tabs, 100 char lines)
-- Service code changes require snapshot cache invalidation (automatic on content hash change)
+- Snapshots auto-clear on process startup — code and config changes are picked up on restart without manual intervention
 - The SDK is fully inlined into service bundles — changes to `packages/sdk/` affect all services
 - npm packages in services must be on the allowlist (`src/core/util/npm_allowlist.ts`)
 - Tests: `deno task test` — uses Deno's built-in test runner
-- Delete `bot.sqlite` to force fresh snapshot rebuild (also clears chat config mappings — run `/setconfig` again)
-- Stale bundles in SQLite can persist old code; snapshot builder always upserts on content hash change
+- `/updateconfig` re-fetches config from Pubky homeserver and force-rebuilds snapshot (use when config changes without restarting)
 - `dispatch.miss` logs at debug level (hidden at default info level) — set `LOG_MIN_LEVEL=debug` to see routing misses
+- **Never use dynamic `import()` in services** — the bundler only handles static imports. Dynamic imports resolve to `/tmp/...` at runtime and fail.
 - **JSON config mutations are not a concern** — services are not deployed yet, so breaking changes to config schemas, service definitions, or data formats can be made freely without migration worries

@@ -208,34 +208,35 @@ export async function buildSnapshot(
 		return { id: command, command };
 	}
 
-	for (const svc of template.services || []) {
-		const bundle = built[idx++];
-		const meta = await loadMeta(svc.entry, svc.command);
-		// Local file-based datasets (developer convenience)
-		const datasetsLocal = await loadDatasets(svc.entry) || {};
-		// Pubky referenced datasets from service config (mapping name -> pubky:// URL)
-		const configDatasetsRaw = (svc.config?.datasets as Record<string, unknown> | undefined) || {};
+	// Resolve datasets for a service: merge local file-based datasets with pubky-referenced datasets from config
+	async function resolveDatasets(
+		entry: string,
+		config?: Record<string, unknown>,
+	): Promise<Record<string, unknown> | undefined> {
+		const datasetsLocal = await loadDatasets(entry) || {};
+		const configDatasetsRaw = (config?.datasets as Record<string, unknown> | undefined) || {};
 		for (const [k, v] of Object.entries(configDatasetsRaw)) {
 			if (typeof v === "string") {
 				if (v.startsWith("pubky://")) {
-					// Normalize: remove trailing .json if present
 					const norm = v.replace(/\.json$/i, "");
-					// Store placeholder for unresolved pubky references (legacy path)
 					datasetsLocal[k] = { __pubkyRef: norm };
 				} else {
-					// Plain string values allowed (e.g., http URL), pass through
 					datasetsLocal[k] = v;
 				}
 			} else if (v !== null && typeof v === "object") {
-				// Already resolved JSON blob from modular Pubky resolver
 				datasetsLocal[k] = v as Record<string, unknown>;
 			} else {
-				// Primitive (number/boolean/null) – keep as-is
 				// deno-lint-ignore no-explicit-any
 				datasetsLocal[k] = v as any;
 			}
 		}
-		const datasets = Object.keys(datasetsLocal).length ? datasetsLocal : undefined;
+		return Object.keys(datasetsLocal).length ? datasetsLocal : undefined;
+	}
+
+	for (const svc of template.services || []) {
+		const bundle = built[idx++];
+		const meta = await loadMeta(svc.entry, svc.command);
+		const datasets = await resolveDatasets(svc.entry, svc.config);
 		commandRoutes[svc.command] = {
 			serviceId: meta.id,
 			kind: svc.kind === "command_flow" ? "command_flow" : "single_command",
@@ -250,11 +251,14 @@ export async function buildSnapshot(
 	for (const l of template.listeners || []) {
 		const bundle = built[idx++];
 		const meta = await loadMeta(l.entry, l.command);
+		const datasets = await resolveDatasets(l.entry, l.config);
 		listenerRoutes.push({
 			serviceId: meta.id,
 			kind: "listener",
 			bundleHash: bundle.bundleHash,
+			config: l.config,
 			meta,
+			datasets,
 			net: meta.net,
 		});
 	}

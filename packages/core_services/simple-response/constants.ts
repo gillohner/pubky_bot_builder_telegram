@@ -43,6 +43,8 @@ export const SIMPLE_RESPONSE_CONFIG_SCHEMA: JSONSchema = {
         message: {
             type: "string",
             description: "The response message to send when the command is invoked",
+            format: "textarea",
+            maxLength: 4000,
         },
         parseMode: {
             type: "string",
