@@ -179,7 +179,7 @@ export const URL_CLEANER_DATASET_SCHEMAS: DatasetSchemas = {
                 },
                 {
                     name: "YouTube to Invidious",
-                    pattern: "^https?://(?:www\\.)?youtube\\.com/watch\\?v=([^&]+).*$",
+                    pattern: "^https?://(?:(?:www\\.)?youtube\\.com/(?:watch\\?v=|shorts/|embed/)|youtu\\.be/)([^&?/]+).*$",
                     replacement: "https://yewtu.be/watch?v=$1",
                     enabled: true,
                 },
@@ -370,6 +370,12 @@ export const DEFAULT_ALT_FRONTENDS: AltFrontendsDataset = {
             name: "Twitter/X → Xcancel",
             pattern: "^https?://(?:www\\.)?(twitter\\.com|x\\.com)/(.+)$",
             replacement: "https://xcancel.com/$2",
+            enabled: true,
+        },
+        {
+            name: "YouTube → Invidious",
+            pattern: "^https?://(?:(?:www\\.)?youtube\\.com/(?:watch\\?v=|shorts/|embed/)|youtu\\.be/)([^&?/]+).*$",
+            replacement: "https://yewtu.be/watch?v=$1",
             enabled: true,
         },
     ],

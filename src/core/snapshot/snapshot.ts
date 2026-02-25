@@ -245,6 +245,7 @@ export async function buildSnapshot(
 			meta,
 			datasets,
 			net: meta.net,
+			deleteCommandMessage: svc.deleteCommandMessage,
 		};
 	}
 	const listenerRoutes: ListenerRoute[] = [];
@@ -260,6 +261,7 @@ export async function buildSnapshot(
 			meta,
 			datasets,
 			net: meta.net,
+			deleteCommandMessage: l.deleteCommandMessage,
 		});
 	}
 

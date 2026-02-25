@@ -104,7 +104,11 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				setActiveFlow(evt.ctx.chatId, evt.ctx.userId, route.serviceId);
 			}
 		}
-		return { response: res.value ?? { kind: "none" } };
+		const response = res.value ?? { kind: "none" } as ServiceResponse;
+		if (route.deleteCommandMessage && response.kind !== "none") {
+			response.deleteTrigger = true;
+		}
+		return { response };
 	}
 	if (evt.kind === "callback") {
 		const snapshot = await buildSnapshot(evt.ctx.chatId);
@@ -192,7 +196,11 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			});
 		}
 		log.debug("dispatch.callback.ok", { serviceId: route.serviceId, kind: res.value?.kind });
-		return { response: res.value ?? { kind: "none" } };
+		const cbResponse = res.value ?? { kind: "none" } as ServiceResponse;
+		if (route.deleteCommandMessage && cbResponse.kind !== "none") {
+			cbResponse.deleteTrigger = true;
+		}
+		return { response: cbResponse };
 	}
 	if (evt.kind === "message") {
 		const snapshot = await buildSnapshot(evt.ctx.chatId);
@@ -300,6 +308,9 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 					serviceId: listener.serviceId,
 					kind: res.value.kind,
 				});
+				if (listener.deleteCommandMessage) {
+					res.value.deleteTrigger = true;
+				}
 				return { response: res.value };
 			}
 		}

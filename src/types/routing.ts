@@ -12,6 +12,7 @@ export interface BaseRoute {
 	meta: RouteMeta;
 	datasets?: Record<string, unknown>; // placeholder for resolved dataset blobs (json / future binary refs)
 	net?: string[]; // allowed network domains for sandbox
+	deleteCommandMessage?: boolean; // delete user's command message after bot responds
 }
 export interface CommandRoute extends BaseRoute {
 	kind: "single_command" | "command_flow";
