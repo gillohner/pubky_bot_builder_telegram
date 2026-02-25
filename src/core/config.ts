@@ -9,6 +9,15 @@ export const CONFIG = {
 	defaultTemplateId: Deno.env.get("DEFAULT_TEMPLATE_ID") ?? "default",
 	enableDeletePinned: (Deno.env.get("ENABLE_DELETE_PINNED") ?? "0").toLowerCase() === "1",
 	defaultMessageTtl: Number(Deno.env.get("DEFAULT_MESSAGE_TTL") ?? "0"), // in seconds
+	/** Comma-separated Telegram user IDs allowed to use admin commands (setconfig, updateconfig).
+	 *  These users are always admin in any chat. In groups, Telegram chat admins also have access. */
+	botAdminIds: (Deno.env.get("BOT_ADMIN_IDS") ?? "")
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean),
+	/** Whether to lock DM config (prevent non-bot-owners from using /setconfig in DMs).
+	 *  "1" = locked (only BOT_ADMIN_IDS can change DM config), "0" = open (old behavior). */
+	lockDmConfig: (Deno.env.get("LOCK_DM_CONFIG") ?? "0").toLowerCase() === "1",
 };
 
 export function isProd() {
