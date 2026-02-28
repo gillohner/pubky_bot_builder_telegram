@@ -34,6 +34,8 @@ export interface MeetupsConfig {
 	maxEvents?: number;
 	/** Show calendar title with eventky link above events (default: true) */
 	showCalendarTitle?: boolean;
+	/** Link each event title to its eventky page (default: true) */
+	linkEvents?: boolean;
 	/** Base URL for eventky web app (default: "https://eventky.app") */
 	eventkyBaseUrl?: string;
 	/** Which timeline options to offer (default: all three) */
@@ -177,6 +179,12 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 			type: "boolean",
 			title: "Show Calendar Title",
 			description: "Show calendar name with eventky link above events",
+			default: true,
+		},
+		linkEvents: {
+			type: "boolean",
+			title: "Link Events",
+			description: "Link each event title to its eventky.app page",
 			default: true,
 		},
 		eventkyBaseUrl: {
@@ -349,10 +357,12 @@ export function formatEventDate(dtstart: string, dtend?: string): string {
 
 /**
  * Format a list of event occurrences as an HTML message.
+ * When eventkyBaseUrl is provided, event titles link to their eventky page.
  */
 export function formatEventsMessage(
 	occurrences: EventOccurrence[],
 	title: string,
+	eventkyBaseUrl?: string,
 ): string {
 	if (occurrences.length === 0) {
 		return `<b>${escapeHtml(title)}</b>\n\nNo upcoming events found.`;
@@ -362,7 +372,18 @@ export function formatEventsMessage(
 
 	for (const occ of occurrences) {
 		const date = formatEventDate(occ.occurrenceStart, occ.occurrenceEnd);
-		text += `\n<b>${escapeHtml(occ.summary)}</b>`;
+		const name = escapeHtml(occ.summary);
+		let eventUrl = eventkyBaseUrl ? buildEventkyEventUrl(occ.uri, eventkyBaseUrl) : "";
+		// For recurring events, link to the specific occurrence
+		if (eventUrl && occ.isRecurring) {
+			eventUrl += `?instance=${encodeURIComponent(occ.occurrenceStart)}`;
+		}
+
+		if (eventUrl) {
+			text += `\n<b><a href="${eventUrl}">${name}</a></b>`;
+		} else {
+			text += `\n<b>${name}</b>`;
+		}
 		if (occ.isRecurring) text += ` \u{1F501}`;
 		text += `\n${escapeHtml(date)}\n`;
 		if (occ.locationName) {
@@ -467,6 +488,7 @@ export const DEFAULT_CONFIG: Partial<MeetupsConfig> = {
 	title: "Upcoming Events",
 	maxEvents: 10,
 	showCalendarTitle: true,
+	linkEvents: true,
 	eventkyBaseUrl: "https://eventky.app",
 	timelineOptions: ["week", "2weeks", "30days"],
 };

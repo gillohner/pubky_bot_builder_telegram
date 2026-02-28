@@ -693,7 +693,10 @@ const service = defineService({
 					const occurrences = await fetchEvents(config, calendarIndices, windowEnd);
 					const header = buildCalendarHeader(config, selectedCalendar);
 					const rangeLabel = TIMELINE_LABELS[rangeId] || rangeId;
-					const eventList = formatEventsMessage(occurrences, rangeLabel);
+					const linkBaseUrl = config.linkEvents !== false
+						? (config.eventkyBaseUrl || "https://eventky.app")
+						: undefined;
+					const eventList = formatEventsMessage(occurrences, rangeLabel, linkBaseUrl);
 					const text = header + eventList;
 					const kb = buildEventListKeyboard(hasMultiple, MEETUPS_SERVICE_ID);
 
