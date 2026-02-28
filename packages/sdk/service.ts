@@ -36,6 +36,8 @@ export interface ServiceManifest {
 	schemaVersion: number;
 	/** NPM packages required by this service */
 	npmDependencies?: string[];
+	/** Domains this service needs network access to */
+	net?: string[];
 	/** JSON Schema for validating service config */
 	configSchema?: JSONSchema;
 	/** JSON Schemas for validating each named dataset */
@@ -70,6 +72,7 @@ export function defineService(def: ServiceDefinition): DefinedService {
 			description,
 			schemaVersion: SERVICE_SDK_SCHEMA_VERSION,
 			npmDependencies: def.npmDependencies,
+			net: def.net,
 			configSchema: def.configSchema,
 			datasetSchemas: def.datasetSchemas,
 		},
