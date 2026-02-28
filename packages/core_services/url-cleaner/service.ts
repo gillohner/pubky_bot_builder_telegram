@@ -7,6 +7,7 @@ import {
     ALT_FRONTENDS_DATASET_SCHEMA,
     DEFAULT_ALT_FRONTENDS,
     DEFAULT_CONFIG,
+    EXTRA_TRACKING_PARAMS,
     URL_CLEANER_CONFIG_SCHEMA,
     URL_CLEANER_DATASET_SCHEMAS,
     URL_CLEANER_SERVICE_ID,
@@ -43,7 +44,34 @@ function extractUrls(text: string): string[] {
 }
 
 /**
- * Clean a URL using tidy-url
+ * Strip additional tracking params that tidy-url misses (e.g. YouTube `si`)
+ */
+function stripExtraTrackers(url: string): { cleaned: string; removed: string[] } {
+    try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname;
+        const removed: string[] = [];
+
+        for (const [hostPattern, params] of Object.entries(EXTRA_TRACKING_PARAMS)) {
+            if (new RegExp(hostPattern, "i").test(hostname)) {
+                for (const param of params) {
+                    if (parsed.searchParams.has(param)) {
+                        parsed.searchParams.delete(param);
+                        removed.push(param);
+                    }
+                }
+            }
+        }
+
+        if (removed.length === 0) return { cleaned: url, removed: [] };
+        return { cleaned: parsed.toString(), removed };
+    } catch {
+        return { cleaned: url, removed: [] };
+    }
+}
+
+/**
+ * Clean a URL using tidy-url, then strip extra known trackers
  */
 function cleanUrl(url: string): { cleaned: string; removed: string[] } {
     try {
@@ -53,10 +81,16 @@ function cleanUrl(url: string): { cleaned: string; removed: string[] } {
         const removed = rawRemoved.map((r: unknown) =>
             typeof r === "string" ? r : (r as { key?: string })?.key || String(r)
         );
-        return { cleaned: result.url, removed };
+        // Strip additional trackers tidy-url doesn't know about
+        const extra = stripExtraTrackers(result.url);
+        return {
+            cleaned: extra.cleaned,
+            removed: [...removed, ...extra.removed],
+        };
     } catch {
-        // If tidy-url fails, return original
-        return { cleaned: url, removed: [] };
+        // If tidy-url fails, still try extra stripping
+        const extra = stripExtraTrackers(url);
+        return { cleaned: extra.cleaned, removed: extra.removed };
     }
 }
 
@@ -143,16 +177,16 @@ function formatUrlResult(
 
     // Show original if configured
     if (config.showOriginalUrl) {
-        parts.push(`📎 *Original:* \`${result.original}\``);
+        parts.push(`📎 *Original:*\n\`${result.original}\``);
     }
 
     // Show cleaned URL if modified, or always alongside an alt-frontend
     const showCleaned = config.showCleanedUrl ?? DEFAULT_CONFIG.showCleanedUrl;
     if (showCleaned && result.wasModified) {
-        parts.push(`🧹 *Cleaned:* ${result.cleaned}`);
+        parts.push(`🧹 *Cleaned:*\n${result.cleaned}`);
     } else if (result.altFrontend && !result.wasModified) {
         // Show direct URL alongside alt-frontend even if nothing was cleaned
-        parts.push(`🔗 *Direct:* ${result.cleaned}`);
+        parts.push(`🔗 *Direct:*\n${result.cleaned}`);
     }
 
     // Show removed params if configured
@@ -162,7 +196,7 @@ function formatUrlResult(
 
     // Show alt-frontend if available
     if (result.altFrontend) {
-        parts.push(`🔄 *${result.altFrontend.name}:* ${result.altFrontend.url}`);
+        parts.push(`🔄 *${result.altFrontend.name}:*\n${result.altFrontend.url}`);
     }
 
     // If we have nothing to show, return null

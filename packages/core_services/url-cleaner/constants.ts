@@ -362,6 +362,25 @@ export const DEFAULT_CONFIG = {
     maxUrlsPerMessage: 5,
 } as const;
 
+/**
+ * Additional tracking parameters to strip that tidy-url misses.
+ * Keyed by hostname pattern (regex), with an array of param names to remove.
+ */
+export const EXTRA_TRACKING_PARAMS: Record<string, string[]> = {
+    // YouTube `si` is a sharing tracking identifier
+    "(?:www\\.)?youtube\\.com|youtu\\.be": ["si"],
+    // X/Twitter — tidy-url knows twitter.com but not x.com
+    "(?:www\\.)?x\\.com": ["s", "t", "ref_src", "ref_url"],
+    // Instagram tracking
+    "(?:www\\.)?instagram\\.com": ["igsh"],
+    // Reddit sharing trackers
+    "(?:www\\.|old\\.)?reddit\\.com": ["share_id", "ref", "ref_source"],
+    // TikTok sharing/device trackers
+    "(?:www\\.)?tiktok\\.com": ["_t", "_r", "is_from_webapp", "sender_device", "sender_web_id"],
+    // Medium source tracking
+    "(?:www\\.)?medium\\.com": ["source"],
+};
+
 export const DEFAULT_ALT_FRONTENDS: AltFrontendsDataset = {
     version: "1.0.0",
     description: "Built-in alternative frontend mappings",
@@ -376,6 +395,30 @@ export const DEFAULT_ALT_FRONTENDS: AltFrontendsDataset = {
             name: "YouTube → Invidious",
             pattern: "^https?://(?:(?:www\\.)?youtube\\.com/(?:watch\\?v=|shorts/|embed/)|youtu\\.be/)([^&?/]+).*$",
             replacement: "https://yewtu.be/watch?v=$1",
+            enabled: true,
+        },
+        {
+            name: "Reddit → Redlib",
+            pattern: "^https?://(?:www\\.|old\\.)?reddit\\.com/(.+)$",
+            replacement: "https://redlib.catsarch.com/$1",
+            enabled: true,
+        },
+        {
+            name: "Instagram → Proxigram",
+            pattern: "^https?://(?:www\\.)?instagram\\.com/(.+)$",
+            replacement: "https://proxigram.lunar.icu/$1",
+            enabled: true,
+        },
+        {
+            name: "TikTok → ProxiTok",
+            pattern: "^https?://(?:www\\.)?tiktok\\.com/(.+)$",
+            replacement: "https://proxitok.pabloferreiro.es/$1",
+            enabled: true,
+        },
+        {
+            name: "Medium → Scribe",
+            pattern: "^https?://(?:www\\.)?medium\\.com/(.+)$",
+            replacement: "https://scribe.rip/$1",
             enabled: true,
         },
     ],

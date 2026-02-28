@@ -155,6 +155,23 @@ Deno.test("should show both direct URL and alt-frontend when URL is unchanged", 
     }
 });
 
+// Extra tracker stripping tests
+Deno.test("should strip YouTube si tracking parameter", () => {
+    const ev = makeMessageEvent(
+        "https://youtu.be/aoag03mSuXQ?si=ieEplJNjKO8cAm4j",
+        { serviceConfig: { showCleanedUrl: true, silentIfUnchanged: false } },
+    );
+    const result = service.handlers.message(ev) as ServiceResponse;
+    assertEquals(result.kind, "reply");
+    if (result.kind === "reply") {
+        assertStringIncludes(result.text!, "Cleaned");
+        // Should not contain the si param in the cleaned URL
+        assertEquals(result.text!.includes("si="), false);
+        // Should also have the Invidious alt-frontend
+        assertStringIncludes(result.text!, "Invidious");
+    }
+});
+
 // Multiple URLs Tests
 Deno.test("should process multiple URLs in one message", () => {
     const ev = makeMessageEvent(
