@@ -417,7 +417,7 @@ export function buildEventkyCalendarUrl(calUri: string, baseUrl: string): string
 	const match = /^pubky:\/\/([^/]+)\/pub\/eventky\.app\/calendars\/([^/]+)/.exec(calUri);
 	if (!match) return "";
 	const [, pk, calendarId] = match;
-	return `${baseUrl.replace(/\/$/, "")}/calendars/${pk}/${calendarId}`;
+	return `${baseUrl.replace(/\/$/, "")}/calendar/${pk}/${calendarId}`;
 }
 
 /**
@@ -428,7 +428,7 @@ export function buildEventkyEventUrl(eventUri: string, baseUrl: string): string 
 	const match = /^pubky:\/\/([^/]+)\/pub\/eventky\.app\/events\/([^/]+)/.exec(eventUri);
 	if (!match) return "";
 	const [, pk, eventId] = match;
-	return `${baseUrl.replace(/\/$/, "")}/events/${pk}/${eventId}`;
+	return `${baseUrl.replace(/\/$/, "")}/event/${pk}/${eventId}`;
 }
 
 /**
