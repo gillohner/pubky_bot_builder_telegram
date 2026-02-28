@@ -8,7 +8,7 @@ import type { DatasetSchemas, JSONSchema } from "@sdk/mod.ts";
 // ============================================================================
 
 export const MEETUPS_SERVICE_ID = "meetups" as const;
-export const MEETUPS_VERSION = "2.0.0" as const;
+export const MEETUPS_VERSION = "2.1.0" as const;
 export const MEETUPS_COMMAND = "meetups" as const;
 export const MEETUPS_REPLACE_GROUP = "meetups_menu" as const;
 
@@ -24,8 +24,8 @@ export interface CalendarSource {
 }
 
 export interface MeetupsConfig {
-	/** Nexus API base URL for fetching events */
-	nexusUrl: string;
+	/** Nexus API base URL for fetching events (default: "https://nexus.eventky.app") */
+	nexusUrl?: string;
 	/** Pubky calendar URIs to fetch events from */
 	calendars: CalendarSource[];
 	/** Header text (default: "Upcoming Events") */
@@ -34,7 +34,7 @@ export interface MeetupsConfig {
 	maxEvents?: number;
 	/** Show calendar title with eventky link above events (default: true) */
 	showCalendarTitle?: boolean;
-	/** Base URL for eventky web app (default: "https://app.eventky.com") */
+	/** Base URL for eventky web app (default: "https://eventky.app") */
 	eventkyBaseUrl?: string;
 	/** Which timeline options to offer (default: all three) */
 	timelineOptions?: TimelineRangeId[];
@@ -56,16 +56,67 @@ export const TIMELINE_LABELS: Record<TimelineRangeId, string> = {
 
 export const DEFAULT_TIMELINE_OPTIONS: TimelineRangeId[] = ["week", "2weeks", "30days"];
 
-/** Subset of Nexus EventStreamItem fields we use */
-export interface NexusEvent {
+// ============================================================================
+// Nexus API Types
+// ============================================================================
+
+/** Full event details from Nexus /v0/event/{author_id}/{event_id} */
+export interface NexusEventDetails {
+	id: string;
+	author: string;
+	uri: string;
 	summary: string;
 	dtstart: string;
-	dtend?: string;
-	dtstart_tzid?: string;
-	description?: string;
-	uri?: string;
-	author?: string;
-	id?: string;
+	dtend?: string | null;
+	dtstart_tzid?: string | null;
+	dtend_tzid?: string | null;
+	dtstart_timestamp?: number | null;
+	description?: string | null;
+	status?: string | null;
+	rrule?: string | null;
+	rdate?: string[] | null;
+	exdate?: string[] | null;
+	duration?: string | null;
+	locations?: string | null;
+	url?: string | null;
+}
+
+/** Response from /v0/event/{author_id}/{event_id} */
+export interface NexusEventView {
+	details: NexusEventDetails;
+	tags?: unknown[];
+	attendees?: unknown[];
+}
+
+/** Response from /v0/calendar/{author_id}/{calendar_id} */
+export interface NexusCalendarView {
+	details: {
+		id: string;
+		author: string;
+		uri: string;
+		name: string;
+		timezone: string;
+		description?: string | null;
+	};
+	events: string[];
+}
+
+/** A specific occurrence of an event to display in the timeline */
+export interface EventOccurrence {
+	/** Event summary/title */
+	summary: string;
+	/** Description (if any) */
+	description?: string | null;
+	/** The date/time of this occurrence (ISO 8601 string, event-local timezone) */
+	occurrenceStart: string;
+	/** The end date/time of this occurrence (if computable) */
+	occurrenceEnd?: string;
+	/** Event URI for linking */
+	uri: string;
+	/** Whether this event has recurrence rules */
+	isRecurring: boolean;
+	/** Parsed location name (if any) */
+	locationName?: string;
 }
 
 // ============================================================================
@@ -97,8 +148,8 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 		nexusUrl: {
 			type: "string",
 			title: "Nexus API URL",
-			description: "Base URL of the Nexus indexer API (e.g., https://nexus.example.com)",
-			minLength: 1,
+			description: "Base URL of the Nexus indexer API (default: https://nexus.eventky.app)",
+			default: "https://nexus.eventky.app",
 		},
 		calendars: {
 			type: "array",
@@ -131,8 +182,8 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 		eventkyBaseUrl: {
 			type: "string",
 			title: "Eventky Base URL",
-			description: "Base URL for eventky web app (default: https://app.eventky.com)",
-			default: "https://app.eventky.com",
+			description: "Base URL for eventky web app (default: https://eventky.app)",
+			default: "https://eventky.app",
 		},
 		timelineOptions: {
 			type: "array",
@@ -145,10 +196,32 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 			default: ["week", "2weeks", "30days"],
 		},
 	},
-	required: ["nexusUrl", "calendars"],
+	required: ["calendars"],
 };
 
 export const MEETUPS_DATASET_SCHEMAS: DatasetSchemas = {};
+
+// ============================================================================
+// URI Parsing
+// ============================================================================
+
+/** Parse a pubky:// calendar URI into author_id and calendar_id */
+export function parseCalendarUri(
+	uri: string,
+): { authorId: string; calendarId: string } | null {
+	const match = /^pubky:\/\/([^/]+)\/pub\/eventky\.app\/calendars\/([^/]+)/.exec(uri);
+	if (!match) return null;
+	return { authorId: match[1], calendarId: match[2] };
+}
+
+/** Parse a pubky:// event URI into author_id and event_id */
+export function parseEventUri(
+	uri: string,
+): { authorId: string; eventId: string } | null {
+	const match = /^pubky:\/\/([^/]+)\/pub\/eventky\.app\/events\/([^/]+)/.exec(uri);
+	if (!match) return null;
+	return { authorId: match[1], eventId: match[2] };
+}
 
 // ============================================================================
 // Helpers
@@ -162,6 +235,64 @@ export function escapeHtml(text: string): string {
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;");
+}
+
+/**
+ * Parse an ISO 8601 duration string (e.g., "PT3H", "PT1H30M", "P1D") into milliseconds.
+ */
+export function parseDuration(duration: string): number | null {
+	const match = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(duration);
+	if (!match) return null;
+	const days = parseInt(match[1] || "0");
+	const hours = parseInt(match[2] || "0");
+	const minutes = parseInt(match[3] || "0");
+	const seconds = parseInt(match[4] || "0");
+	return ((days * 24 + hours) * 60 + minutes) * 60000 + seconds * 1000;
+}
+
+/**
+ * Compute end time from start + duration string.
+ */
+export function computeOccurrenceEnd(
+	startIso: string,
+	event: NexusEventDetails,
+): string | undefined {
+	if (event.dtend) {
+		// For recurring events, compute the offset from original dtstart→dtend
+		// and apply it to the occurrence start
+		const origStart = new Date(event.dtstart);
+		const origEnd = new Date(event.dtend);
+		const durationMs = origEnd.getTime() - origStart.getTime();
+		if (durationMs > 0) {
+			const occStart = new Date(startIso);
+			return new Date(occStart.getTime() + durationMs).toISOString();
+		}
+		return undefined;
+	}
+	if (event.duration) {
+		const durationMs = parseDuration(event.duration);
+		if (durationMs) {
+			const start = new Date(startIso);
+			return new Date(start.getTime() + durationMs).toISOString();
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Extract a human-readable location name from the event's locations JSON.
+ */
+export function extractLocationName(locationsJson: string | null | undefined): string | undefined {
+	if (!locationsJson) return undefined;
+	try {
+		const locations = JSON.parse(locationsJson) as Array<{ name?: string }>;
+		if (locations.length > 0 && locations[0].name) {
+			return locations[0].name;
+		}
+	} catch {
+		// ignore parse errors
+	}
+	return undefined;
 }
 
 /**
@@ -216,26 +347,30 @@ export function formatEventDate(dtstart: string, dtend?: string): string {
 }
 
 /**
- * Format a list of events as an HTML message.
+ * Format a list of event occurrences as an HTML message.
  */
 export function formatEventsMessage(
-	events: NexusEvent[],
+	occurrences: EventOccurrence[],
 	title: string,
 ): string {
-	if (events.length === 0) {
+	if (occurrences.length === 0) {
 		return `<b>${escapeHtml(title)}</b>\n\nNo upcoming events found.`;
 	}
 
 	let text = `<b>${escapeHtml(title)}</b>\n`;
 
-	for (const event of events) {
-		const date = formatEventDate(event.dtstart, event.dtend);
-		text += `\n<b>${escapeHtml(event.summary)}</b>\n`;
-		text += `${escapeHtml(date)}\n`;
-		if (event.description) {
-			const desc = event.description.length > 100
-				? event.description.slice(0, 97) + "..."
-				: event.description;
+	for (const occ of occurrences) {
+		const date = formatEventDate(occ.occurrenceStart, occ.occurrenceEnd);
+		text += `\n<b>${escapeHtml(occ.summary)}</b>`;
+		if (occ.isRecurring) text += ` \u{1F501}`;
+		text += `\n${escapeHtml(date)}\n`;
+		if (occ.locationName) {
+			text += `\u{1F4CD} ${escapeHtml(occ.locationName)}\n`;
+		}
+		if (occ.description) {
+			const desc = occ.description.length > 100
+				? occ.description.slice(0, 97) + "..."
+				: occ.description;
 			text += `${escapeHtml(desc)}\n`;
 		}
 	}
@@ -244,32 +379,31 @@ export function formatEventsMessage(
 }
 
 /**
- * Compute end date as Unix microseconds for a given timeline range.
+ * Compute end date as a Date object for a given timeline range.
  */
-export function computeEndDate(rangeId: TimelineRangeId): number {
+export function computeEndDate(rangeId: TimelineRangeId): Date {
 	const now = new Date();
 
 	switch (rangeId) {
 		case "week": {
-			// End of current week (Sunday 23:59:59)
-			const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+			const dayOfWeek = now.getDay();
 			const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
 			const endOfWeek = new Date(now);
 			endOfWeek.setDate(now.getDate() + daysUntilSunday);
 			endOfWeek.setHours(23, 59, 59, 999);
-			return endOfWeek.getTime() * 1000;
+			return endOfWeek;
 		}
 		case "2weeks": {
 			const twoWeeks = new Date(now);
 			twoWeeks.setDate(now.getDate() + 14);
 			twoWeeks.setHours(23, 59, 59, 999);
-			return twoWeeks.getTime() * 1000;
+			return twoWeeks;
 		}
 		case "30days": {
 			const thirtyDays = new Date(now);
 			thirtyDays.setDate(now.getDate() + 30);
 			thirtyDays.setHours(23, 59, 59, 999);
-			return thirtyDays.getTime() * 1000;
+			return thirtyDays;
 		}
 	}
 }
@@ -286,6 +420,17 @@ export function buildEventkyCalendarUrl(calUri: string, baseUrl: string): string
 }
 
 /**
+ * Build an eventky web link for a specific event.
+ * URI format: pubky://<pk>/pub/eventky.app/events/<eventId>
+ */
+export function buildEventkyEventUrl(eventUri: string, baseUrl: string): string {
+	const match = /^pubky:\/\/([^/]+)\/pub\/eventky\.app\/events\/([^/]+)/.exec(eventUri);
+	if (!match) return "";
+	const [, pk, eventId] = match;
+	return `${baseUrl.replace(/\/$/, "")}/events/${pk}/${eventId}`;
+}
+
+/**
  * Build an HTML header with the calendar title and optional eventky link.
  * Returns empty string if showCalendarTitle is disabled.
  */
@@ -294,7 +439,7 @@ export function buildCalendarHeader(
 	selectedCalendar: number | "all",
 ): string {
 	if (config.showCalendarTitle === false) return "";
-	const baseUrl = config.eventkyBaseUrl || "https://app.eventky.com";
+	const baseUrl = config.eventkyBaseUrl || "https://eventky.app";
 
 	if (selectedCalendar === "all") {
 		return `<b>${escapeHtml(config.title || "Upcoming Events")}</b>\n\n`;
@@ -317,9 +462,10 @@ export function buildCalendarHeader(
 // ============================================================================
 
 export const DEFAULT_CONFIG: Partial<MeetupsConfig> = {
+	nexusUrl: "https://nexus.eventky.app",
 	title: "Upcoming Events",
 	maxEvents: 10,
 	showCalendarTitle: true,
-	eventkyBaseUrl: "https://app.eventky.com",
+	eventkyBaseUrl: "https://eventky.app",
 	timelineOptions: ["week", "2weeks", "30days"],
 };

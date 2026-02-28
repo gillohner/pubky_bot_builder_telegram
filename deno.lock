@@ -7,6 +7,7 @@
     "jsr:@std/path@1.0.9": "1.0.9",
     "npm:@noble/hashes@1.7.1": "1.7.1",
     "npm:@synonymdev/pubky@0.6.0": "0.6.0",
+    "npm:rrule@2": "2.8.1",
     "npm:tidy-url@*": "1.18.3",
     "npm:tidy-url@1": "1.18.3",
     "npm:zod@3.23.8": "3.23.8"
@@ -42,6 +43,12 @@
         "tough-cookie"
       ]
     },
+    "rrule@2.8.1": {
+      "integrity": "sha512-hM3dHSBMeaJ0Ktp7W38BJZ7O1zOgaFEsn41PDk+yHoEtfLV+PoJt9E9xAlZiWgf/iqEqionN0ebHFZIDAp+iGw==",
+      "dependencies": [
+        "tslib"
+      ]
+    },
     "set-cookie-parser@2.7.2": {
       "integrity": "sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw=="
     },
@@ -63,6 +70,9 @@
       "dependencies": [
         "tldts"
       ]
+    },
+    "tslib@2.8.1": {
+      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     },
     "zod@3.23.8": {
       "integrity": "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="

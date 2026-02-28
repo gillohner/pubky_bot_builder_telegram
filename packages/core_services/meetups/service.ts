@@ -2,11 +2,15 @@
 // Meetups - Command flow service that displays upcoming events from Pubky calendars
 import { defineService, del, none, runService, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
+import { RRule, RRuleSet } from "npm:rrule@2";
 import {
 	buildCalendarHeader,
 	computeEndDate,
+	computeOccurrenceEnd,
 	DEFAULT_CONFIG,
 	DEFAULT_TIMELINE_OPTIONS,
+	type EventOccurrence,
+	extractLocationName,
 	formatEventsMessage,
 	MEETUPS_COMMAND,
 	MEETUPS_CONFIG_SCHEMA,
@@ -16,68 +20,233 @@ import {
 	MEETUPS_VERSION,
 	type MeetupsConfig,
 	type MeetupsState,
-	type NexusEvent,
+	type NexusCalendarView,
+	type NexusEventDetails,
+	type NexusEventView,
+	parseCalendarUri,
+	parseEventUri,
 	TIMELINE_LABELS,
 	type TimelineRangeId,
 } from "./constants.ts";
 
 // ============================================================================
-// Helpers
+// Recurrence Expansion
 // ============================================================================
 
-async function fetchEvents(
-	config: MeetupsConfig,
-	calendarIndices: number[],
-	endDateMicros?: number,
-): Promise<NexusEvent[]> {
-	const allEvents: NexusEvent[] = [];
-	const maxEvents = config.maxEvents ?? 10;
-	const nowMicros = Date.now() * 1000;
-	const baseUrl = config.nexusUrl.replace(/\/$/, "");
+/**
+ * Parse a naive datetime string as a "UTC" Date for rrule processing.
+ * Event dtstart values like "2026-01-08T19:00:14" are local times (no Z suffix).
+ * We treat them as UTC for rrule computation to avoid timezone library dependency.
+ * The small timezone offset error (±12h) is acceptable for week/2week/30day ranges.
+ */
+function parseAsUtc(dateStr: string): Date {
+	// If already has timezone info, parse directly
+	if (dateStr.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(dateStr)) {
+		return new Date(dateStr);
+	}
+	// Treat naive datetime as UTC
+	return new Date(dateStr + "Z");
+}
 
-	const calendarsToFetch = calendarIndices.map((i) => config.calendars[i]).filter(Boolean);
+/**
+ * Expand an event's recurrence rules into individual occurrences within a time window.
+ * Returns occurrences sorted by date.
+ */
+function expandOccurrences(
+	event: NexusEventDetails,
+	windowStart: Date,
+	windowEnd: Date,
+): EventOccurrence[] {
+	const isRecurring = !!(event.rrule || (event.rdate && event.rdate.length > 0));
+	const locationName = extractLocationName(event.locations);
 
-	for (const cal of calendarsToFetch) {
+	if (!isRecurring) {
+		// Non-recurring: check if dtstart falls within the window
+		const start = parseAsUtc(event.dtstart);
+		if (start >= windowStart && start <= windowEnd) {
+			return [{
+				summary: event.summary,
+				description: event.description,
+				occurrenceStart: event.dtstart,
+				occurrenceEnd: computeOccurrenceEnd(event.dtstart, event),
+				uri: event.uri,
+				isRecurring: false,
+				locationName,
+			}];
+		}
+		return [];
+	}
+
+	// Build RRuleSet for recurrence expansion
+	const rruleSet = new RRuleSet();
+	const dtstart = parseAsUtc(event.dtstart);
+
+	// Add the RRULE if present
+	if (event.rrule) {
 		try {
-			const params = new URLSearchParams({
-				calendar: cal.uri,
-				start_date: String(nowMicros),
-				limit: String(maxEvents),
-				status: "CONFIRMED",
-			});
-			if (endDateMicros) {
-				params.set("end_date", String(endDateMicros));
-			}
-			const url = `${baseUrl}/v0/stream/events?${params}`;
-			const resp = await fetch(url);
-			if (!resp.ok) {
-				console.error(`Failed to fetch events for calendar ${cal.uri}: ${resp.status}`);
-				continue;
-			}
-			const events = (await resp.json()) as NexusEvent[];
-			allEvents.push(...events);
+			const ruleOptions = RRule.parseString(event.rrule);
+			ruleOptions.dtstart = dtstart;
+			rruleSet.rrule(new RRule(ruleOptions));
 		} catch (err) {
-			console.error(`Error fetching events for calendar ${cal.uri}:`, (err as Error).message);
+			console.error(`Failed to parse RRULE "${event.rrule}" for ${event.uri}:`, err);
+			// Fall back to just dtstart
+			rruleSet.rdate(dtstart);
+		}
+	} else {
+		// No rrule but has rdate — include dtstart as first occurrence
+		rruleSet.rdate(dtstart);
+	}
+
+	// Add RDATEs
+	if (event.rdate) {
+		for (const rd of event.rdate) {
+			try {
+				rruleSet.rdate(parseAsUtc(rd));
+			} catch {
+				// skip unparseable rdates
+			}
 		}
 	}
 
-	// Sort by dtstart ascending
-	allEvents.sort((a, b) => {
-		try {
-			return new Date(a.dtstart).getTime() - new Date(b.dtstart).getTime();
-		} catch {
-			return 0;
+	// Add EXDATEs
+	if (event.exdate) {
+		for (const ex of event.exdate) {
+			try {
+				rruleSet.exdate(parseAsUtc(ex));
+			} catch {
+				// skip unparseable exdates
+			}
 		}
+	}
+
+	// Get occurrences in the window
+	const occurrences = rruleSet.between(windowStart, windowEnd, true);
+
+	return occurrences.map((occDate) => {
+		// Convert back to naive ISO string matching the event's local time convention
+		const isoStr = occDate.toISOString().replace("Z", "");
+		return {
+			summary: event.summary,
+			description: event.description,
+			occurrenceStart: isoStr,
+			occurrenceEnd: computeOccurrenceEnd(isoStr, event),
+			uri: event.uri,
+			isRecurring: true,
+			locationName,
+		};
+	});
+}
+
+// ============================================================================
+// Fetching
+// ============================================================================
+
+/**
+ * Fetch all event URIs for a calendar via the Nexus calendar view endpoint.
+ */
+async function fetchCalendarEventUris(
+	baseUrl: string,
+	calendarUri: string,
+): Promise<string[]> {
+	const parsed = parseCalendarUri(calendarUri);
+	if (!parsed) {
+		console.error(`Invalid calendar URI: ${calendarUri}`);
+		return [];
+	}
+	const url = `${baseUrl}/v0/calendar/${parsed.authorId}/${parsed.calendarId}`;
+	const resp = await fetch(url);
+	if (!resp.ok) {
+		console.error(`Failed to fetch calendar ${calendarUri}: ${resp.status}`);
+		return [];
+	}
+	const data = (await resp.json()) as NexusCalendarView;
+	return data.events || [];
+}
+
+/**
+ * Fetch a single event's full details from Nexus.
+ */
+async function fetchEventDetails(
+	baseUrl: string,
+	eventUri: string,
+): Promise<NexusEventDetails | null> {
+	const parsed = parseEventUri(eventUri);
+	if (!parsed) {
+		console.error(`Invalid event URI: ${eventUri}`);
+		return null;
+	}
+	const url = `${baseUrl}/v0/event/${parsed.authorId}/${parsed.eventId}`;
+	const resp = await fetch(url);
+	if (!resp.ok) {
+		console.error(`Failed to fetch event ${eventUri}: ${resp.status}`);
+		return null;
+	}
+	const data = (await resp.json()) as NexusEventView;
+	return data.details;
+}
+
+/**
+ * Fetch events for the specified calendars, expand recurrences, and return
+ * occurrences sorted by date within the given time window.
+ */
+async function fetchEvents(
+	config: MeetupsConfig,
+	calendarIndices: number[],
+	windowEnd: Date,
+): Promise<EventOccurrence[]> {
+	const maxEvents = config.maxEvents ?? 10;
+	const baseUrl = (config.nexusUrl || "https://nexus.eventky.app").replace(/\/$/, "");
+	const windowStart = new Date();
+	const calendarsToFetch = calendarIndices.map((i) => config.calendars[i]).filter(Boolean);
+
+	// Step 1: Fetch event URIs from all calendars
+	const allEventUris = new Set<string>();
+	for (const cal of calendarsToFetch) {
+		try {
+			const uris = await fetchCalendarEventUris(baseUrl, cal.uri);
+			for (const uri of uris) allEventUris.add(uri);
+		} catch (err) {
+			console.error(`Error fetching calendar ${cal.uri}:`, (err as Error).message);
+		}
+	}
+
+	if (allEventUris.size === 0) return [];
+
+	// Step 2: Fetch event details in parallel (limit to 30 events max)
+	const urisToFetch = [...allEventUris].slice(0, 30);
+	const eventPromises = urisToFetch.map((uri) =>
+		fetchEventDetails(baseUrl, uri).catch((err) => {
+			console.error(`Error fetching event ${uri}:`, (err as Error).message);
+			return null;
+		})
+	);
+	const events = (await Promise.all(eventPromises)).filter(
+		(e): e is NexusEventDetails => e !== null,
+	);
+
+	// Step 3: Filter to CONFIRMED events (or events without status)
+	const confirmed = events.filter((e) => !e.status || e.status === "CONFIRMED");
+
+	// Step 4: Expand recurrences and collect all occurrences in the window
+	const allOccurrences: EventOccurrence[] = [];
+	for (const event of confirmed) {
+		const occurrences = expandOccurrences(event, windowStart, windowEnd);
+		allOccurrences.push(...occurrences);
+	}
+
+	// Step 5: Sort by occurrence date ascending
+	allOccurrences.sort((a, b) => {
+		return new Date(a.occurrenceStart).getTime() - new Date(b.occurrenceStart).getTime();
 	});
 
-	// Deduplicate by URI and limit
+	// Step 6: Deduplicate by event URI + occurrence date, then limit
 	const seen = new Set<string>();
-	const unique: NexusEvent[] = [];
-	for (const ev of allEvents) {
-		const key = ev.uri || ev.summary + ev.dtstart;
+	const unique: EventOccurrence[] = [];
+	for (const occ of allOccurrences) {
+		const key = `${occ.uri}|${occ.occurrenceStart}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
-		unique.push(ev);
+		unique.push(occ);
 		if (unique.length >= maxEvents) break;
 	}
 
@@ -147,6 +316,7 @@ const service = defineService({
 	kind: "command_flow",
 	command: MEETUPS_COMMAND,
 	description: "Display upcoming events from Pubky calendars",
+	npmDependencies: ["rrule"],
 	configSchema: MEETUPS_CONFIG_SCHEMA,
 	datasetSchemas: MEETUPS_DATASET_SCHEMAS,
 	net: ["__runtime__"],
@@ -155,11 +325,11 @@ const service = defineService({
 			const rawConfig = ev.serviceConfig || {};
 			const config: MeetupsConfig = { ...DEFAULT_CONFIG, ...rawConfig } as MeetupsConfig;
 
-			if (!config.nexusUrl || !config.calendars?.length) {
+			if (!config.calendars?.length) {
 				return uiKeyboard(
 					UIBuilder.keyboard().namespace(MEETUPS_SERVICE_ID)
 						.callback("\u2716 Close", "close").build(),
-					"Meetups service is not configured. Please set a Nexus URL and calendar URIs.",
+					"Meetups service is not configured. Please set at least one calendar URI.",
 					{
 						state: state.replace({}),
 						options: { parse_mode: "HTML", replaceGroup: MEETUPS_REPLACE_GROUP },
@@ -234,7 +404,7 @@ const service = defineService({
 			const timeMatch = /^time:(.+)$/.exec(data);
 			if (timeMatch) {
 				const rangeId = timeMatch[1] as TimelineRangeId;
-				const endDateMicros = computeEndDate(rangeId);
+				const windowEnd = computeEndDate(rangeId);
 				const selectedCalendar = currentState.selectedCalendar ?? 0;
 
 				// Determine which calendar indices to fetch
@@ -243,10 +413,10 @@ const service = defineService({
 					: [selectedCalendar as number];
 
 				try {
-					const events = await fetchEvents(config, calendarIndices, endDateMicros);
+					const occurrences = await fetchEvents(config, calendarIndices, windowEnd);
 					const header = buildCalendarHeader(config, selectedCalendar);
 					const rangeLabel = TIMELINE_LABELS[rangeId] || rangeId;
-					const eventList = formatEventsMessage(events, rangeLabel);
+					const eventList = formatEventsMessage(occurrences, rangeLabel);
 					const text = header + eventList;
 					const kb = buildEventListKeyboard(hasMultiple, MEETUPS_SERVICE_ID);
 
