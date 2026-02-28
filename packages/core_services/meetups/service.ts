@@ -2,7 +2,8 @@
 // Meetups - Command flow service that displays upcoming events from Pubky calendars
 import { defineService, del, none, runService, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import type { CallbackEvent, CommandEvent, MessageEvent } from "@sdk/mod.ts";
-import { RRule, RRuleSet } from "npm:rrule@2";
+import rruleLib from "npm:rrule@2";
+const { RRule, RRuleSet } = rruleLib;
 import {
 	buildCalendarHeader,
 	computeEndDate,
