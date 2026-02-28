@@ -15,7 +15,7 @@
 	"tasks": {
 		"dev": "deno run --watch --allow-net --allow-env --allow-run --allow-read=./packages,./src,./secrets,./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,$HOME/.cache/deno,$HOME/Library/Caches/deno,/tmp --allow-write=./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,/tmp --allow-import=deno.land,cdn.skypack.dev,jsr.io,registry.npmjs.org,cdn.npmjs.org --env-file=.env.local src/main.ts",
 		"serve": "WEBHOOK=1 deno run --allow-net --allow-env --allow-run --allow-read=./packages,./src,./secrets,./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,$HOME/.cache/deno,$HOME/Library/Caches/deno,/tmp --allow-write=./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,/tmp --allow-import=deno.land,cdn.skypack.dev,jsr.io,registry.npmjs.org,cdn.npmjs.org --env-file=.env.local src/main.ts",
-		"test": "deno test --allow-env --allow-read=./packages,./src,./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal --allow-run --allow-import=deno.land,cdn.skypack.dev,jsr.io,registry.npmjs.org,cdn.npmjs.org",
+		"test": "deno test --allow-env --allow-read=./packages,./src,./bot.sqlite,./bot.sqlite-journal,./bot.sqlite-wal,/tmp --allow-write=/tmp --allow-run --allow-import=deno.land,cdn.skypack.dev,jsr.io,registry.npmjs.org,cdn.npmjs.org",
 		"lint": "deno lint",
 		"fmt": "deno fmt"
 	},

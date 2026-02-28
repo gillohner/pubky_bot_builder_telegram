@@ -22,14 +22,12 @@ export interface HelpCommandEntry {
 }
 
 export interface HelpConfig {
-	/** Main help text (Markdown) */
+	/** Main help text (HTML) */
 	message: string;
 	/** Optional list of commands to append */
 	commands?: HelpCommandEntry[];
 	/** Whether to append the command list (default: true) */
 	showCommandList?: boolean;
-	/** Parse mode (default: "Markdown") */
-	parseMode?: "Markdown" | "HTML" | "MarkdownV2";
 }
 
 // ============================================================================
@@ -63,7 +61,7 @@ export const HELP_CONFIG_SCHEMA: JSONSchema = {
 		message: {
 			type: "string",
 			title: "Help Message",
-			description: "The main help message to display (supports Markdown)",
+			description: "The main help message to display (supports HTML tags)",
 			format: "textarea",
 			maxLength: 2000,
 		},
@@ -77,11 +75,6 @@ export const HELP_CONFIG_SCHEMA: JSONSchema = {
 			type: "boolean",
 			title: "Show Command List",
 			description: "Whether to append the command list after the message (default: true)",
-		},
-		parseMode: {
-			type: "string",
-			enum: ["Markdown", "HTML", "MarkdownV2"],
-			description: "Parse mode for the message (default: Markdown)",
 		},
 	},
 	required: ["message"],
@@ -127,5 +120,4 @@ export const DEFAULT_CONFIG: HelpConfig = {
 	message: "Welcome! Here's what I can do:",
 	commands: [],
 	showCommandList: true,
-	parseMode: "Markdown",
 };

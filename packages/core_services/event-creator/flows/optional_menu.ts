@@ -13,8 +13,20 @@ import { MENU_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
 import { buildEventSummary } from "../utils/preview.ts";
-import { normalizeDate, parseDateParts, validateDate, validateDescription, validateEndTime, validateLocationName, validateTime } from "../utils/validation.ts";
-import { handleLocationSearchInput, handleOnlineUrlInput, showLocationTypeMenu } from "./location.ts";
+import {
+	normalizeDate,
+	parseDateParts,
+	validateDate,
+	validateDescription,
+	validateEndTime,
+	validateLocationName,
+	validateTime,
+} from "../utils/validation.ts";
+import {
+	handleLocationSearchInput,
+	handleOnlineUrlInput,
+	showLocationTypeMenu,
+} from "./location.ts";
 
 export function showOptionalMenu(
 	st: EventCreatorState,

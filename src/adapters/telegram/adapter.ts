@@ -72,7 +72,7 @@ async function handleReply(ctx: Context, r: Extract<ServiceResponse, { kind: "re
 	await ctx.reply(
 		r.text ?? "", // reply kind expected to carry text; fallback to empty
 		{
-			parse_mode: "Markdown",
+			parse_mode: "HTML",
 			...(r.options as Record<string, unknown> ?? {}),
 		},
 	);
@@ -80,7 +80,7 @@ async function handleReply(ctx: Context, r: Extract<ServiceResponse, { kind: "re
 
 async function handleEdit(ctx: Context, r: Extract<ServiceResponse, { kind: "edit" }>) {
 	const editOpts = {
-		parse_mode: "Markdown" as const,
+		parse_mode: "HTML" as const,
 		...(r.options as Record<string, unknown> ?? {}),
 	};
 	try {
@@ -333,13 +333,13 @@ async function handleUI(ctx: Context, r: Extract<ServiceResponse, { kind: "ui" }
 		if (result.photo) {
 			msg = await ctx.replyWithPhoto(result.photo, {
 				caption: result.text,
-				parse_mode: "Markdown",
+				parse_mode: "HTML",
 				// @ts-ignore - Grammy types are strict, but this is valid
 				reply_markup: result.reply_markup,
 			});
 		} else {
 			msg = await ctx.reply(result.text, {
-				parse_mode: "Markdown",
+				parse_mode: "HTML",
 				// @ts-ignore - Grammy types are strict, but this is valid
 				reply_markup: result.reply_markup,
 			});

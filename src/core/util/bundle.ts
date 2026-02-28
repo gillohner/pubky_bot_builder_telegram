@@ -204,8 +204,11 @@ async function inlineAllImports(
 }
 
 // Detect npm imports in code and validate against allowlist
-function detectNpmImports(code: string): { hasNpm: boolean; packages: string[]; disallowed: string[] } {
-	const npmImportRegex = /import\s+(?:type\s+)?(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+\w+|\w+))*\s+from\s+["'](npm:[^"']+)["'];?/g;
+function detectNpmImports(
+	code: string,
+): { hasNpm: boolean; packages: string[]; disallowed: string[] } {
+	const npmImportRegex =
+		/import\s+(?:type\s+)?(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+\w+|\w+))*\s+from\s+["'](npm:[^"']+)["'];?/g;
 	const packages: string[] = [];
 	const disallowed: string[] = [];
 	let match: RegExpExecArray | null;
@@ -283,7 +286,9 @@ async function bundleWithEsbuild(
 				HOME: Deno.env.get("HOME") || "",
 				PATH: Deno.env.get("PATH") || "",
 				...(Deno.env.get("DENO_DIR") ? { DENO_DIR: Deno.env.get("DENO_DIR")! } : {}),
-				...(Deno.env.get("XDG_CACHE_HOME") ? { XDG_CACHE_HOME: Deno.env.get("XDG_CACHE_HOME")! } : {}),
+				...(Deno.env.get("XDG_CACHE_HOME")
+					? { XDG_CACHE_HOME: Deno.env.get("XDG_CACHE_HOME")! }
+					: {}),
 			},
 		});
 
@@ -346,7 +351,7 @@ export async function bundleService(
 		if (disallowed.length > 0) {
 			throw new Error(
 				`Service uses disallowed npm packages: ${disallowed.join(", ")}. ` +
-				`Only packages in the allowlist can be used.`
+					`Only packages in the allowlist can be used.`,
 			);
 		}
 
@@ -373,7 +378,7 @@ export async function bundleService(
 				tempFilePath,
 			});
 			return { entry: tempFilePath, code: finalCode, hasNpm: true };
-			} else {
+		} else {
 			// Use manual inlining for services without npm (faster)
 			const visited = new Set<string>();
 			let inlinedService = await inlineAllImports(servicePath, visited, projectRoot);
@@ -399,7 +404,14 @@ export async function bundleService(
 			const tempFilePath = `${bundleDir}/service_${hash}.ts`;
 			await Deno.writeTextFile(tempFilePath, finalCode);
 
-			cache.set(cacheKey, { url: tempFilePath, code: finalCode, sdkSig, mtimeSvc: svcMeta.mtime, hasNpm: false, tempFilePath });
+			cache.set(cacheKey, {
+				url: tempFilePath,
+				code: finalCode,
+				sdkSig,
+				mtimeSvc: svcMeta.mtime,
+				hasNpm: false,
+				tempFilePath,
+			});
 			return { entry: tempFilePath, code: finalCode, hasNpm: false };
 		}
 	} catch (err) {

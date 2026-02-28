@@ -1,13 +1,7 @@
 // packages/core_services/event-creator/flows/location.ts
 // Location selection flow with Nominatim geocoding, confirmation, and message cleanup
 
-import {
-	type CallbackEvent,
-	type MessageEvent,
-	state,
-	UIBuilder,
-	uiKeyboard,
-} from "@sdk/mod.ts";
+import { type CallbackEvent, type MessageEvent, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import { LOC_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
 import { showOptionalMenu } from "./optional_menu.ts";
@@ -74,7 +68,7 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 		return uiKeyboard(
 			keyboard.build(),
 			"💻 *Online Meeting*\n\n" +
-				'Enter the meeting URL (e.g., https://meet.google.com/... or https://zoom.us/...)\n\n' +
+				"Enter the meeting URL (e.g., https://meet.google.com/... or https://zoom.us/...)\n\n" +
 				'Or type "skip" to cancel:',
 			{
 				state: state.replace({
@@ -128,7 +122,9 @@ function showLocationConfirmation(st: EventCreatorState) {
  */
 export function handleLocationSelect(ev: CallbackEvent, index: string) {
 	const st = (ev.state ?? {}) as EventCreatorState;
-	const results = (st as Record<string, unknown>)._nominatimResults as NominatimResult[] | undefined;
+	const results = (st as Record<string, unknown>)._nominatimResults as
+		| NominatimResult[]
+		| undefined;
 
 	const idx = parseInt(index, 10);
 	if (!results || isNaN(idx) || idx < 0 || idx >= results.length) {

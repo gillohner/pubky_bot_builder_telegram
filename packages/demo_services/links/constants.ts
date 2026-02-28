@@ -98,12 +98,12 @@ export const LINK_CATEGORIES: LinkCategory[] = [
 		links: [
 			{
 				title: "Nitter",
-				url: "https://nitter.net"
+				url: "https://nitter.net",
 			},
 			{
 				title: "ProxiTok",
 				url: "https://proxitok.pabloferreiro.es",
-			}
+			},
 		],
 	},
 ];

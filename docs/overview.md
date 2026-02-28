@@ -63,7 +63,9 @@ flowchart TB
 
 ## Complete Flow Example: Event Creator Service
 
-The following diagram shows the complete data flow when a user creates an event using the Event Creator service, demonstrating how sandboxed services can safely publish to the decentralized Pubky network:
+The following diagram shows the complete data flow when a user creates an event using the Event
+Creator service, demonstrating how sandboxed services can safely publish to the decentralized Pubky
+network:
 
 ```mermaid
 flowchart LR
@@ -111,6 +113,7 @@ flowchart LR
 ```
 
 **Flow Steps:**
+
 1. User sends `/newevent` command
 2. Dispatcher runs Event Creator in isolated sandbox
 3. Service uses SDK to build multi-step flow, collects event data
@@ -184,7 +187,8 @@ This ensures services cannot access sensitive data or cause harm.
 
 ### 5. PubkyWriter (`src/core/pubky/writer.ts`)
 
-The PubkyWriter enables services to publish data to the Pubky decentralized network with admin approval:
+The PubkyWriter enables services to publish data to the Pubky decentralized network with admin
+approval:
 
 ```mermaid
 sequenceDiagram
@@ -239,6 +243,7 @@ sequenceDiagram
 ```
 
 **Key Security Features:**
+
 - Services cannot directly write to Pubky (sandbox isolation)
 - All writes require human admin approval
 - Preview shown to admins before approval

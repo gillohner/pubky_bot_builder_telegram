@@ -24,8 +24,6 @@ export interface LinkCategory {
 export interface LinksConfig {
 	/** Header message shown above category buttons */
 	title?: string;
-	/** Parse mode (default: "Markdown") */
-	parseMode?: "Markdown" | "HTML" | "MarkdownV2";
 }
 
 export interface LinksDataset {
@@ -44,11 +42,6 @@ export const LINKS_CONFIG_SCHEMA: JSONSchema = {
 			title: "Header Message",
 			description: "Message shown above the category buttons (default: 'Select a category:')",
 			maxLength: 200,
-		},
-		parseMode: {
-			type: "string",
-			enum: ["Markdown", "HTML", "MarkdownV2"],
-			description: "Parse mode for messages (default: Markdown)",
 		},
 	},
 };
@@ -143,7 +136,6 @@ export const DEFAULT_CATEGORIES: LinkCategory[] = [
 
 export const DEFAULT_CONFIG: LinksConfig = {
 	title: "Select a category:",
-	parseMode: "Markdown",
 };
 
 // ============================================================================
@@ -160,8 +152,16 @@ export function getCategories(datasets?: Record<string, unknown>): LinkCategory[
 	return DEFAULT_CATEGORIES;
 }
 
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
 export function renderCategory(categories: LinkCategory[], idx: number): string {
 	const cat = categories[idx];
 	if (!cat) return "Unknown category";
-	return `*${cat.name}*\n` + cat.links.map((l) => `• [${l.title}](${l.url})`).join("\n");
+	return `<b>${escapeHtml(cat.name)}</b>\n` +
+		cat.links.map((l) => `• <a href="${l.url}">${escapeHtml(l.title)}</a>`).join("\n");
 }

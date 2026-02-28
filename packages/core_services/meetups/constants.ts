@@ -32,8 +32,6 @@ export interface MeetupsConfig {
 	title?: string;
 	/** Max events to show (default: 10) */
 	maxEvents?: number;
-	/** Parse mode (default: "HTML") */
-	parseMode?: "Markdown" | "HTML" | "MarkdownV2";
 	/** Show calendar title with eventky link above events (default: true) */
 	showCalendarTitle?: boolean;
 	/** Base URL for eventky web app (default: "https://app.eventky.com") */
@@ -123,12 +121,6 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 			minimum: 1,
 			maximum: 50,
 			default: 10,
-		},
-		parseMode: {
-			type: "string",
-			enum: ["Markdown", "HTML", "MarkdownV2"],
-			description: "Parse mode for messages (default: HTML)",
-			default: "HTML",
 		},
 		showCalendarTitle: {
 			type: "boolean",
@@ -327,7 +319,6 @@ export function buildCalendarHeader(
 export const DEFAULT_CONFIG: Partial<MeetupsConfig> = {
 	title: "Upcoming Events",
 	maxEvents: 10,
-	parseMode: "HTML",
 	showCalendarTitle: true,
 	eventkyBaseUrl: "https://app.eventky.com",
 	timelineOptions: ["week", "2weeks", "30days"],

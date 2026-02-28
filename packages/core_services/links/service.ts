@@ -11,8 +11,8 @@ import {
 	LINKS_REPLACE_GROUP,
 	LINKS_SERVICE_ID,
 	LINKS_VERSION,
-	renderCategory,
 	type LinksConfig,
+	renderCategory,
 } from "./constants.ts";
 
 // ============================================================================
@@ -51,7 +51,7 @@ const service = defineService({
 			return uiKeyboard(kb, config.title || "Select a category:", {
 				state: state.replace({ active: true }),
 				options: {
-					parse_mode: config.parseMode || "Markdown",
+					parse_mode: "HTML",
 					replaceGroup: LINKS_REPLACE_GROUP,
 				},
 			});
@@ -67,8 +67,6 @@ const service = defineService({
 			if (!match) return none();
 
 			const idx = Number(match[1]);
-			const rawConfig = ev.serviceConfig || {};
-			const config: LinksConfig = { ...DEFAULT_CONFIG, ...rawConfig };
 			const categories = getCategories(ev.datasets);
 			const text = renderCategory(categories, idx);
 			const kb = buildCategoryKeyboard(categories, LINKS_SERVICE_ID);
@@ -76,7 +74,7 @@ const service = defineService({
 			return uiKeyboard(kb, text, {
 				state: state.replace({ active: true }),
 				options: {
-					parse_mode: config.parseMode || "Markdown",
+					parse_mode: "HTML",
 					replaceGroup: LINKS_REPLACE_GROUP,
 				},
 			});

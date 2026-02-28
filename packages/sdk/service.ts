@@ -14,6 +14,8 @@ export interface ServiceDefinition {
 	description?: string; // optional - injected if omitted
 	/** NPM packages required by this service (must be in allowed list) */
 	npmDependencies?: string[];
+	/** Domains this service needs network access to (e.g. ["api.example.com"]) */
+	net?: string[];
 	/** JSON Schema for validating service config */
 	configSchema?: JSONSchema;
 	/** JSON Schemas for validating each named dataset */

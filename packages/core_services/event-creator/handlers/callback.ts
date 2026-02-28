@@ -2,7 +2,13 @@
 // Callback handler router for optional menu and calendar selection
 
 import { type CallbackEvent, reply, state } from "@sdk/mod.ts";
-import { CAL_REPLACE_GROUP, CB_CALENDAR_PREFIX, CB_EDIT_PREFIX, CB_LOCATION_PREFIX, CB_MENU_PREFIX } from "../constants.ts";
+import {
+	CAL_REPLACE_GROUP,
+	CB_CALENDAR_PREFIX,
+	CB_EDIT_PREFIX,
+	CB_LOCATION_PREFIX,
+	CB_MENU_PREFIX,
+} from "../constants.ts";
 import { handleCalendarMenu, handleCalendarToggle } from "../flows/calendar.ts";
 import { handleEditField, handleEditMenu } from "../flows/edit.ts";
 import {
