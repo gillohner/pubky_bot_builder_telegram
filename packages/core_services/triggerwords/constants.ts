@@ -119,6 +119,13 @@ export const TRIGGERWORDS_CONFIG_SCHEMA: JSONSchema = {
 			description: "Whether to reply to the message or send standalone (default: false)",
 			default: false,
 		},
+		messageTtl: {
+			type: "integer",
+			title: "Message TTL",
+			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
+			minimum: 0,
+			default: 300,
+		},
 	},
 };
 

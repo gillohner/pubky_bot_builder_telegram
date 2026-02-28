@@ -204,6 +204,13 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 			},
 			default: ["week", "2weeks", "30days"],
 		},
+		messageTtl: {
+			type: "integer",
+			title: "Message TTL",
+			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
+			minimum: 0,
+			default: 300,
+		},
 	},
 	required: ["calendars"],
 };

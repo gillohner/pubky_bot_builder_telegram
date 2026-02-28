@@ -8,7 +8,7 @@ export const CONFIG = {
 	logPretty: (Deno.env.get("LOG_PRETTY") ?? "0").toLowerCase() === "1",
 	defaultTemplateId: Deno.env.get("DEFAULT_TEMPLATE_ID") ?? "default",
 	enableDeletePinned: (Deno.env.get("ENABLE_DELETE_PINNED") ?? "0").toLowerCase() === "1",
-	defaultMessageTtl: Number(Deno.env.get("DEFAULT_MESSAGE_TTL") ?? "0"), // in seconds
+	defaultMessageTtl: Number(Deno.env.get("DEFAULT_MESSAGE_TTL") ?? "300"), // in seconds (default: 5 min, 0 to disable)
 	/** Comma-separated Telegram user IDs allowed to use admin commands (setconfig, updateconfig).
 	 *  These users are always admin in any chat. In groups, Telegram chat admins also have access. */
 	botAdminIds: (Deno.env.get("BOT_ADMIN_IDS") ?? "")

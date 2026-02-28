@@ -17,6 +17,23 @@ import type { ServiceResponse } from "@sdk/mod.ts";
 import type { SandboxPayload } from "@sdk/mod.ts";
 import type { ExecutePayload } from "@schema/sandbox.ts";
 
+/**
+ * Apply per-service messageTtl from config if the response doesn't already have a ttl.
+ * Priority: service code ttl > config messageTtl > global DEFAULT_MESSAGE_TTL.
+ */
+function applyConfigTtl(
+	response: ServiceResponse,
+	config?: Record<string, unknown>,
+): void {
+	if (!config) return;
+	const configTtl = config.messageTtl;
+	if (typeof configTtl !== "number") return;
+	// Only override if the service didn't set an explicit ttl
+	if ((response as { ttl?: number }).ttl === undefined) {
+		(response as { ttl?: number }).ttl = configTtl;
+	}
+}
+
 type BaseCtx = { chatId: string; userId: string };
 type CommandEvent = { kind: "command"; command: string; ctx: BaseCtx };
 type CallbackEvent = { kind: "callback"; data: string; ctx: BaseCtx };
@@ -105,9 +122,12 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			}
 		}
 		const response = res.value ?? { kind: "none" } as ServiceResponse;
-		if (route.deleteCommandMessage && response.kind !== "none") {
+		// Always delete the user's command message (e.g., "/meetups")
+		if (response.kind !== "none") {
 			response.deleteTrigger = true;
 		}
+		// Apply per-service messageTtl from config (overrides global default, overridden by service code)
+		applyConfigTtl(response, route.config);
 		return { response };
 	}
 	if (evt.kind === "callback") {
@@ -197,9 +217,8 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 		}
 		log.debug("dispatch.callback.ok", { serviceId: route.serviceId, kind: res.value?.kind });
 		const cbResponse = res.value ?? { kind: "none" } as ServiceResponse;
-		if (route.deleteCommandMessage && cbResponse.kind !== "none") {
-			cbResponse.deleteTrigger = true;
-		}
+		// Apply per-service messageTtl from config (overrides global default, overridden by service code)
+		applyConfigTtl(cbResponse, route.config);
 		return { response: cbResponse };
 	}
 	if (evt.kind === "message") {

@@ -76,6 +76,13 @@ export const HELP_CONFIG_SCHEMA: JSONSchema = {
 			title: "Show Command List",
 			description: "Whether to append the command list after the message (default: true)",
 		},
+		messageTtl: {
+			type: "integer",
+			title: "Message TTL",
+			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
+			minimum: 0,
+			default: 300,
+		},
 	},
 	required: ["message"],
 };

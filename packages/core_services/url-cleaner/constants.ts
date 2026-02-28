@@ -157,6 +157,13 @@ export const URL_CLEANER_CONFIG_SCHEMA: JSONSchema = {
 			maximum: 10,
 			default: 5,
 		},
+		messageTtl: {
+			type: "integer",
+			title: "Message TTL",
+			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
+			minimum: 0,
+			default: 300,
+		},
 	},
 };
 

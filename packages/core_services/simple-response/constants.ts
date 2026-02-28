@@ -48,6 +48,13 @@ export const SIMPLE_RESPONSE_CONFIG_SCHEMA: JSONSchema = {
 			type: "boolean",
 			description: "Whether to disable link previews (default: false)",
 		},
+		messageTtl: {
+			type: "integer",
+			title: "Message TTL",
+			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
+			minimum: 0,
+			default: 300,
+		},
 	},
 	required: ["message"],
 };
