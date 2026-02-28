@@ -148,7 +148,7 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 		nexusUrl: {
 			type: "string",
 			title: "Nexus API URL",
-			description: "Base URL of the Nexus indexer API (default: https://nexus.eventky.app)",
+			description: "Base URL of the Nexus indexer API",
 			default: "https://nexus.eventky.app",
 		},
 		calendars: {
@@ -161,14 +161,14 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 		title: {
 			type: "string",
 			title: "Header Title",
-			description: "Header text shown above the event list (default: 'Upcoming Events')",
+			description: "Header text shown above the event list",
 			maxLength: 200,
 			default: "Upcoming Events",
 		},
 		maxEvents: {
 			type: "integer",
 			title: "Max Events",
-			description: "Maximum number of events to display (default: 10)",
+			description: "Maximum number of events to display",
 			minimum: 1,
 			maximum: 50,
 			default: 10,
@@ -176,19 +176,20 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 		showCalendarTitle: {
 			type: "boolean",
 			title: "Show Calendar Title",
-			description: "Show calendar name with eventky link above events (default: true)",
+			description: "Show calendar name with eventky link above events",
 			default: true,
 		},
 		eventkyBaseUrl: {
 			type: "string",
 			title: "Eventky Base URL",
-			description: "Base URL for eventky web app (default: https://eventky.app)",
+			description: "Base URL for eventky web app",
 			default: "https://eventky.app",
 		},
 		timelineOptions: {
 			type: "array",
 			title: "Timeline Options",
-			description: "Which timeline filter options to offer",
+			description:
+				"Timeline filter buttons to show: 'week' (this week), '2weeks' (next 2 weeks), '30days' (next 30 days)",
 			items: {
 				type: "string",
 				enum: ["week", "2weeks", "30days"],
