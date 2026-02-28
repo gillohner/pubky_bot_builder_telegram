@@ -93,14 +93,26 @@ export const HELP_DATASET_SCHEMAS: DatasetSchemas = {};
 // Helpers
 // ============================================================================
 
+/**
+ * Escape HTML entities in user-provided text to prevent injection
+ * and ensure valid HTML parse mode output.
+ */
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
 export function formatHelpMessage(config: HelpConfig): string {
-	let text = config.message;
+	// Escape user-provided message to avoid breaking HTML parse mode
+	let text = escapeHtml(config.message);
 
 	const showCommands = config.showCommandList !== false;
 	if (showCommands && config.commands && config.commands.length > 0) {
-		text += "\n\n*Commands:*\n";
+		text += "\n\n<b>Commands:</b>\n";
 		text += config.commands
-			.map((c) => `${c.command} — ${c.description}`)
+			.map((c) => `${escapeHtml(c.command)} — ${escapeHtml(c.description)}`)
 			.join("\n");
 	}
 

@@ -31,7 +31,7 @@ const service = defineService({
 
 			return reply(text, {
 				options: {
-					parse_mode: config.parseMode || "Markdown",
+					parse_mode: "HTML",
 					disable_web_page_preview: true,
 				},
 			});
