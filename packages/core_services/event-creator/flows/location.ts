@@ -4,6 +4,7 @@
 import { type CallbackEvent, type MessageEvent, state, UIBuilder, uiKeyboard } from "@sdk/mod.ts";
 import { LOC_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
+import { escapeHtml } from "../utils/formatting.ts";
 import { showOptionalMenu } from "./optional_menu.ts";
 import { validateLocationName } from "../utils/validation.ts";
 
@@ -29,7 +30,7 @@ export function showLocationTypeMenu(st: EventCreatorState) {
 		.row()
 		.callback("← Back to Menu", "location:back");
 
-	return uiKeyboard(keyboard.build(), "📍 *Add Location*\n\nWhat type of location?", {
+	return uiKeyboard(keyboard.build(), "📍 <b>Add Location</b>\n\nWhat type of location?", {
 		state: state.replace(st),
 		options: { replaceGroup: LOC_REPLACE_GROUP },
 	});
@@ -48,7 +49,7 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 
 		return uiKeyboard(
 			keyboard.build(),
-			"📍 *Physical Location*\n\n" +
+			"📍 <b>Physical Location</b>\n\n" +
 				'Enter the venue name or address to search (or type "skip" to cancel):',
 			{
 				state: state.replace({
@@ -67,7 +68,7 @@ export function handleLocationTypeSelect(ev: CallbackEvent, locationType: string
 
 		return uiKeyboard(
 			keyboard.build(),
-			"💻 *Online Meeting*\n\n" +
+			"💻 <b>Online Meeting</b>\n\n" +
 				"Enter the meeting URL (e.g., https://meet.google.com/... or https://zoom.us/...)\n\n" +
 				'Or type "skip" to cancel:',
 			{
@@ -101,10 +102,14 @@ function showLocationConfirmation(st: EventCreatorState) {
 
 	let text: string;
 	if (isOnline) {
-		text = `💻 *Online Meeting Selected*\n\n*URL:* ${loc.structured_data}`;
+		text = `💻 <b>Online Meeting Selected</b>\n\n<b>URL:</b> ${
+			escapeHtml(loc.structured_data || "")
+		}`;
 	} else {
-		text = `📍 *Location Selected*\n\n*Name:* ${loc.name}`;
-		if (loc.structured_data) text += `\n🔗 [OpenStreetMap](${loc.structured_data})`;
+		text = `📍 <b>Location Selected</b>\n\n<b>Name:</b> ${escapeHtml(loc.name || "")}`;
+		if (loc.structured_data) {
+			text += `\n🔗 <a href="${escapeHtml(loc.structured_data)}">OpenStreetMap</a>`;
+		}
 		if (loc.lat != null && loc.lng != null) {
 			text += `\n📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
 		}
@@ -248,7 +253,7 @@ export async function handleLocationSearchInput(
 
 		return uiKeyboard(
 			keyboard.build(),
-			`📍 *Search Results* for "${text}"\n\nSelect a location:`,
+			`📍 <b>Search Results</b> for "${escapeHtml(text)}"\n\nSelect a location:`,
 			{
 				state: state.replace(updatedState),
 				options: { replaceGroup: LOC_REPLACE_GROUP },

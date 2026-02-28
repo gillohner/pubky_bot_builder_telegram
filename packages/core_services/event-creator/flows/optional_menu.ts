@@ -12,6 +12,7 @@ import {
 import { MENU_REPLACE_GROUP, SERVICE_ID } from "../constants.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
 import { isCalendarSelectionEnabled } from "../utils/calendar.ts";
+import { escapeHtml } from "../utils/formatting.ts";
 import { buildEventSummary } from "../utils/preview.ts";
 import {
 	normalizeDate,
@@ -68,7 +69,7 @@ export function showOptionalMenu(
 		.callback("❌ Cancel", "menu:cancel", "danger");
 
 	const summary = buildEventSummary(st, config);
-	const message = `${summary}\n\n*What would you like to do?*`;
+	const message = `${summary}\n\n<b>What would you like to do?</b>`;
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
@@ -85,21 +86,21 @@ export function handleOptionalMenuAction(
 	switch (action) {
 		case "description":
 			return reply(
-				"📝 *Add Description*\n\n" +
+				"📝 <b>Add Description</b>\n\n" +
 					'Enter a description for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "description" }),
-					options: { cleanupGroup: MENU_REPLACE_GROUP },
+					options: { parse_mode: "HTML", cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 
 		case "image":
 			return reply(
-				"🖼️ *Add Image*\n\n" +
+				"🖼️ <b>Add Image</b>\n\n" +
 					'Send a photo for your event (or type "skip" to cancel):',
 				{
 					state: state.merge({ waitingFor: "image" }),
-					options: { cleanupGroup: MENU_REPLACE_GROUP },
+					options: { parse_mode: "HTML", cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 
@@ -108,11 +109,11 @@ export function handleOptionalMenuAction(
 
 		case "endtime":
 			return reply(
-				"⏰ *Add End Time*\n\n" +
+				"⏰ <b>Add End Time</b>\n\n" +
 					'First, enter the end date (DD.MM.YYYY) or type "skip" to cancel:',
 				{
 					state: state.merge({ waitingFor: "endDate" }),
-					options: { cleanupGroup: MENU_REPLACE_GROUP },
+					options: { parse_mode: "HTML", cleanupGroup: MENU_REPLACE_GROUP },
 				},
 			);
 
@@ -253,13 +254,14 @@ function handleEndDateInput(text: string, st: EventCreatorState, _ev: MessageEve
 	}
 
 	return reply(
-		`✅ End date: *${normalized}*\n\n` +
+		`✅ End date: <b>${escapeHtml(normalized)}</b>\n\n` +
 			`Now enter the end time (HH:MM):`,
 		{
 			state: state.merge({
 				endDate: normalized,
 				waitingFor: "endTime",
 			}),
+			options: { parse_mode: "HTML" },
 		},
 	);
 }

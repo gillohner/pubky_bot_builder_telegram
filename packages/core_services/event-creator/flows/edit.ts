@@ -11,6 +11,7 @@ import {
 } from "@sdk/mod.ts";
 import { SERVICE_ID } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
+import { escapeHtml } from "../utils/formatting.ts";
 import { getEditPrompt, isFieldClearable } from "../utils/state.ts";
 import {
 	normalizeDate,
@@ -53,7 +54,7 @@ export function handleEditMenu(ev: CallbackEvent) {
 
 	keyboard.callback("← Back to Menu", "edit:back");
 
-	const message = `✏️ *Edit Fields*\n\nSelect a field to edit:`;
+	const message = `✏️ <b>Edit Fields</b>\n\nSelect a field to edit:`;
 
 	return uiKeyboard(keyboard.build(), message, {
 		state: state.replace(st),
@@ -189,13 +190,14 @@ function validateAndUpdateField(
 				// Prompt for endTime if not set
 				if (!st.endTime) {
 					return reply(
-						`✅ End date: *${normalizedEnd}*\n\n` +
+						`✅ End date: <b>${escapeHtml(normalizedEnd)}</b>\n\n` +
 							`Now enter the end time (HH:MM):`,
 						{
 							state: state.merge({
 								endDate: normalizedEnd,
 								editingField: "endTime",
 							}),
+							options: { parse_mode: "HTML" },
 						},
 					);
 				}

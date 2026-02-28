@@ -51,6 +51,16 @@ export function applyTemplate(
 }
 
 /**
+ * Escape HTML special characters for safe embedding in HTML messages.
+ */
+export function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
+/**
  * Truncate text for display
  */
 export function truncate(text: string, maxLength: number): string {

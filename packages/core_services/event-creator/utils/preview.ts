@@ -3,7 +3,7 @@
 
 import type { PubkyAppEvent } from "@eventky/mod.ts";
 import type { EventCreatorConfig, EventCreatorState } from "../types.ts";
-import { truncate } from "./formatting.ts";
+import { escapeHtml, truncate } from "./formatting.ts";
 import { getAllCalendarUris, getCalendarName } from "./calendar.ts";
 
 /**
@@ -75,23 +75,27 @@ export function buildEventSummary(
 	};
 
 	const lines: string[] = [
-		`📋 *Event Summary*\n`,
-		`📌 *Title:* ${state.title}`,
-		`📅 *Date:* ${state.startDate}`,
-		`⏰ *Time:* ${state.startTime}`,
+		`📋 <b>Event Summary</b>\n`,
+		`📌 <b>Title:</b> ${escapeHtml(state.title || "")}`,
+		`📅 <b>Date:</b> ${escapeHtml(state.startDate || "")}`,
+		`⏰ <b>Time:</b> ${escapeHtml(state.startTime || "")}`,
 	];
 
 	// Optional fields
 	if (state.description) {
-		lines.push(`📝 *Description:* ${truncate(state.description, 100)}`);
+		lines.push(`📝 <b>Description:</b> ${escapeHtml(truncate(state.description, 100))}`);
 	} else {
-		lines.push(`📝 *Description:* _(not set)_`);
+		lines.push(`📝 <b>Description:</b> <i>(not set)</i>`);
 	}
 
 	if (state.endDate && state.endTime) {
-		lines.push(`⏱️ *End${req("endTime")}:* ${state.endDate} at ${state.endTime}`);
+		lines.push(
+			`⏱️ <b>End${req("endTime")}:</b> ${escapeHtml(state.endDate)} at ${
+				escapeHtml(state.endTime)
+			}`,
+		);
 	} else {
-		lines.push(`⏱️ *End${req("endTime")}:* _(not set)_`);
+		lines.push(`⏱️ <b>End${req("endTime")}:</b> <i>(not set)</i>`);
 	}
 
 	if (state.location?.name) {
@@ -99,22 +103,22 @@ export function buildEventSummary(
 		const locText = state.location.location_type === "ONLINE"
 			? state.location.structured_data || state.location.name
 			: truncate(state.location.name, 50);
-		lines.push(`${icon} *Location${req("location")}:* ${locText}`);
+		lines.push(`${icon} <b>Location${req("location")}:</b> ${escapeHtml(locText)}`);
 	} else {
-		lines.push(`📍 *Location${req("location")}:* _(not set)_`);
+		lines.push(`📍 <b>Location${req("location")}:</b> <i>(not set)</i>`);
 	}
 
 	if (state.imageFileId) {
-		lines.push(`🖼️ *Image${req("image")}:* ✅ Attached`);
+		lines.push(`🖼️ <b>Image${req("image")}:</b> ✅ Attached`);
 	} else {
-		lines.push(`🖼️ *Image${req("image")}:* _(not set)_`);
+		lines.push(`🖼️ <b>Image${req("image")}:</b> <i>(not set)</i>`);
 	}
 
 	// Calendar status
 	const calendars = getAllCalendarUris(state, config);
 	if (calendars.length > 0) {
-		const calNames = calendars.map((uri) => getCalendarName(uri, config));
-		lines.push(`\n📋 *Calendars:* ${calNames.join(", ")}`);
+		const calNames = calendars.map((uri) => escapeHtml(getCalendarName(uri, config)));
+		lines.push(`\n📋 <b>Calendars:</b> ${calNames.join(", ")}`);
 	}
 
 	return lines.join("\n");

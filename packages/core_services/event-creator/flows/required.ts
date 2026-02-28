@@ -4,6 +4,7 @@
 import { type MessageEvent, reply, state } from "@sdk/mod.ts";
 import { REQ_STEP_DATE, REQ_STEP_TIME, REQ_STEP_TITLE } from "../constants.ts";
 import type { EventCreatorState } from "../types.ts";
+import { escapeHtml } from "../utils/formatting.ts";
 import { normalizeDate, validateDate, validateTime, validateTitle } from "../utils/validation.ts";
 import { showOptionalMenu } from "./optional_menu.ts";
 
@@ -36,14 +37,15 @@ function handleTitleInput(text: string, _st: EventCreatorState) {
 	}
 
 	return reply(
-		`✅ Title: *${text}*\n\n` +
-			`📝 *Step 2/3*: When is the event? (DD.MM.YYYY)\n\n` +
+		`✅ Title: <b>${escapeHtml(text)}</b>\n\n` +
+			`📝 <b>Step 2/3</b>: When is the event? (DD.MM.YYYY)\n\n` +
 			`Example: 23.04.2026`,
 		{
 			state: state.merge({
 				requirementStep: REQ_STEP_DATE,
 				title: text,
 			}),
+			options: { parse_mode: "HTML" },
 		},
 	);
 }
@@ -57,14 +59,15 @@ function handleDateInput(text: string, _st: EventCreatorState) {
 	const normalized = normalizeDate(text) ?? text;
 
 	return reply(
-		`✅ Date: *${normalized}*\n\n` +
-			`📝 *Step 3/3*: What time? (HH:MM in 24h format)\n\n` +
+		`✅ Date: <b>${escapeHtml(normalized)}</b>\n\n` +
+			`📝 <b>Step 3/3</b>: What time? (HH:MM in 24h format)\n\n` +
 			`Example: 19:30`,
 		{
 			state: state.merge({
 				requirementStep: REQ_STEP_TIME,
 				startDate: normalized,
 			}),
+			options: { parse_mode: "HTML" },
 		},
 	);
 }

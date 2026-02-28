@@ -11,6 +11,7 @@ import {
 	getDefaultCalendarUri,
 	getSelectableCalendars,
 } from "../utils/calendar.ts";
+import { escapeHtml } from "../utils/formatting.ts";
 
 export function handleCalendarMenu(ev: CallbackEvent) {
 	const st = (ev.state ?? {}) as EventCreatorState;
@@ -44,7 +45,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 	const defaultUri = getDefaultCalendarUri(config);
 	if (defaultUri) {
 		const defaultName = getCalendarName(defaultUri, config);
-		descLines.push(`📌 Default: *${defaultName}* _(always included)_`);
+		descLines.push(`📌 Default: <b>${escapeHtml(defaultName)}</b> <i>(always included)</i>`);
 	}
 	for (const cal of selectableCalendars) {
 		if (cal.description) {
@@ -53,7 +54,7 @@ export function handleCalendarMenu(ev: CallbackEvent) {
 		}
 	}
 
-	const message = `📅 *Select Additional Calendars*\n\n` +
+	const message = `📅 <b>Select Additional Calendars</b>\n\n` +
 		(descLines.length > 0 ? descLines.join("\n") + "\n\n" : "") +
 		`Tap to toggle. Selected: ${selected.length}`;
 
