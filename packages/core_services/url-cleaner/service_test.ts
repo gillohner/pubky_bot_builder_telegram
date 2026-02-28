@@ -128,6 +128,33 @@ Deno.test("should use default alt-frontends when no dataset provided", () => {
     }
 });
 
+Deno.test("should show both direct URL and alt-frontend when URL is unchanged", () => {
+    // Clean URL (no tracking params) with an alt-frontend match
+    const ev = makeMessageEvent("https://x.com/user/status/123456", {
+        serviceConfig: { silentIfUnchanged: false },
+        datasets: {
+            altFrontends: {
+                version: "1.0.0",
+                mappings: [
+                    {
+                        name: "Xcancel",
+                        pattern: "(twitter\\.com|x\\.com)",
+                        replacement: "xcancel.com",
+                        enabled: true,
+                    },
+                ],
+            },
+        },
+    });
+    const result = service.handlers.message(ev) as ServiceResponse;
+    assertEquals(result.kind, "reply");
+    if (result.kind === "reply") {
+        // Should show both the direct URL and the alt-frontend
+        assertStringIncludes(result.text!, "Direct");
+        assertStringIncludes(result.text!, "Xcancel");
+    }
+});
+
 // Multiple URLs Tests
 Deno.test("should process multiple URLs in one message", () => {
     const ev = makeMessageEvent(

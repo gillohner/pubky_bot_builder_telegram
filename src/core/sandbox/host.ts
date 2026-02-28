@@ -1,6 +1,7 @@
 // src/core/sandbox/host.ts
 // Moved from src/core/sandbox.ts
 import type { ExecutePayload, SandboxCaps, SandboxResult } from "@schema/sandbox.ts";
+import { log } from "@core/util/logger.ts";
 
 // Get Deno cache directory for npm packages
 function getDenoCacheDir(): string {
@@ -100,6 +101,9 @@ export class SandboxHost {
 		}
 		const stdout = new TextDecoder().decode(output.stdout).trim();
 		const stderr = new TextDecoder().decode(output.stderr).trim();
+		if (stderr) {
+			log.debug("sandbox.stderr", { entry, stderr: stderr.slice(0, 500) });
+		}
 		if (output.code !== 0) {
 			return { ok: false, error: `sandbox exit ${output.code}: ${stderr}` };
 		}

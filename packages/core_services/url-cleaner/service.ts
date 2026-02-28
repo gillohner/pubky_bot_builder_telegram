@@ -146,9 +146,13 @@ function formatUrlResult(
         parts.push(`📎 *Original:* \`${result.original}\``);
     }
 
-    // Show cleaned URL if modified
-    if (result.wasModified && (config.showCleanedUrl ?? DEFAULT_CONFIG.showCleanedUrl)) {
+    // Show cleaned URL if modified, or always alongside an alt-frontend
+    const showCleaned = config.showCleanedUrl ?? DEFAULT_CONFIG.showCleanedUrl;
+    if (showCleaned && result.wasModified) {
         parts.push(`🧹 *Cleaned:* ${result.cleaned}`);
+    } else if (result.altFrontend && !result.wasModified) {
+        // Show direct URL alongside alt-frontend even if nothing was cleaned
+        parts.push(`🔗 *Direct:* ${result.cleaned}`);
     }
 
     // Show removed params if configured

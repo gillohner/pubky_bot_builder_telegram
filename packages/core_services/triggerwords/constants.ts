@@ -108,19 +108,23 @@ export const TRIGGERWORDS_CONFIG_SCHEMA: JSONSchema = {
         responseProbability: {
             type: "number",
             description: "Probability of responding (0-1, default: 1.0 = always respond)",
+            default: 1.0,
         },
         cooldownSeconds: {
             type: "integer",
             description: "Cooldown in seconds between responses in the same chat (default: 0)",
+            default: 0,
         },
         parseMode: {
             type: "string",
             enum: ["Markdown", "HTML", "MarkdownV2"],
             description: "Parse mode for responses (default: Markdown)",
+            default: "Markdown",
         },
         replyToMessage: {
             type: "boolean",
             description: "Whether to reply to the message or send standalone (default: false)",
+            default: false,
         },
     },
 };

@@ -204,8 +204,18 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 	}
 	if (evt.kind === "message") {
 		const snapshot = await buildSnapshot(evt.ctx.chatId);
+		const msgText = (evt.message as { text?: string } | undefined)?.text;
+		log.debug("dispatch.message.start", {
+			chatId: evt.ctx.chatId,
+			listenerCount: snapshot.listeners.length,
+			textPreview: msgText?.slice(0, 50),
+		});
 		const active = getActiveFlow(evt.ctx.chatId, evt.ctx.userId);
 		if (active) {
+			log.debug("dispatch.message.active_flow", {
+				chatId: evt.ctx.chatId,
+				serviceId: active.serviceId,
+			});
 			// Route directly to active flow service (command_flow)
 			const route = Object.values(snapshot.commands).find(
 				(r) => r.serviceId === active.serviceId && r.kind === "command_flow",
@@ -269,7 +279,18 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			}
 		}
 		// Fallback to listeners
+		log.debug("dispatch.listeners.start", {
+			chatId: evt.ctx.chatId,
+			count: snapshot.listeners.length,
+			ids: snapshot.listeners.map((l) => l.serviceId),
+		});
 		for (const listener of snapshot.listeners) {
+			log.debug("dispatch.listener.exec", {
+				serviceId: listener.serviceId,
+				hasConfig: !!listener.config,
+				hasDatasets: !!listener.datasets,
+				datasetKeys: listener.datasets ? Object.keys(listener.datasets) : [],
+			});
 			const payload: SandboxPayload = {
 				event: { type: "message", message: evt.message },
 				ctx: {
@@ -303,6 +324,11 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				});
 				continue;
 			}
+			log.debug("sandbox.listener.result", {
+				serviceId: listener.serviceId,
+				kind: res.value?.kind,
+				hasText: !!(res.value as { text?: string } | undefined)?.text,
+			});
 			if (res.value && res.value.kind !== "none") {
 				log.debug("sandbox.listener.ok", {
 					serviceId: listener.serviceId,
