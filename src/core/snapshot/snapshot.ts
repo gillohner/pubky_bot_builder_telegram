@@ -244,7 +244,7 @@ export async function buildSnapshot(
 			config: svc.config,
 			meta,
 			datasets,
-			net: meta.net,
+			net: svc.net || meta.net,
 			deleteCommandMessage: svc.deleteCommandMessage,
 		};
 	}
@@ -260,7 +260,7 @@ export async function buildSnapshot(
 			config: l.config,
 			meta,
 			datasets,
-			net: meta.net,
+			net: l.net || meta.net,
 			deleteCommandMessage: l.deleteCommandMessage,
 		});
 	}

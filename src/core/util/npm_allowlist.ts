@@ -16,8 +16,6 @@
 export const ALLOWED_NPM_PACKAGES: Record<string, string> = {
 	// URL cleaning/normalization
 	"tidy-url": "*",
-	// RFC 5545 recurrence rule expansion (meetups service)
-	"rrule": "*",
 };
 
 /**
