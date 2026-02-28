@@ -2,6 +2,7 @@
 import bot from "./bot.ts";
 import { webhookCallback } from "grammy";
 import { cleanupAll } from "@core/ttl/store.ts";
+import { startScheduler } from "@core/scheduler/scheduler.ts";
 import { log } from "@core/util/logger.ts";
 
 async function startupTtlCleanup() {
@@ -25,6 +26,7 @@ async function startupTtlCleanup() {
 if (import.meta.main) {
 	const useWebhook = Deno.env.get("WEBHOOK") === "1";
 	await startupTtlCleanup();
+	startScheduler(bot.api);
 	if (useWebhook) {
 		const handle = webhookCallback(bot, "std/http");
 		Deno.serve((req) => {

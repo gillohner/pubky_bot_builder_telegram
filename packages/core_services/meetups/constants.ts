@@ -40,6 +40,20 @@ export interface MeetupsConfig {
 	eventkyBaseUrl?: string;
 	/** Which timeline options to offer (default: all three) */
 	timelineOptions?: TimelineRangeId[];
+	/** Enable periodic auto-broadcast (default: false) */
+	periodicEnabled?: boolean;
+	/** Day of week to broadcast: 0=Sun, 1=Mon, ..., 6=Sat (default: 1 = Monday) */
+	periodicDay?: number;
+	/** Hour to broadcast in 24h format (default: 7) */
+	periodicHour?: number;
+	/** Timezone for schedule matching (default: "Europe/Zurich") */
+	periodicTimezone?: string;
+	/** Pin the periodic message (default: true) */
+	periodicPin?: boolean;
+	/** Unpin previous periodic message when sending new one (default: true) */
+	periodicUnpinPrevious?: boolean;
+	/** Timeline range for periodic broadcast (default: "week") */
+	periodicRange?: TimelineRangeId;
 }
 
 export interface MeetupsState {
@@ -210,6 +224,53 @@ export const MEETUPS_CONFIG_SCHEMA: JSONSchema = {
 			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
 			minimum: 0,
 			default: 300,
+		},
+		periodicEnabled: {
+			type: "boolean",
+			title: "Enable Periodic Broadcast",
+			description: "Automatically send this week's events on a schedule",
+			default: false,
+		},
+		periodicDay: {
+			type: "integer",
+			title: "Broadcast Day",
+			description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+			minimum: 0,
+			maximum: 6,
+			default: 1,
+		},
+		periodicHour: {
+			type: "integer",
+			title: "Broadcast Hour",
+			description: "Hour to broadcast (24h format, in configured timezone)",
+			minimum: 0,
+			maximum: 23,
+			default: 7,
+		},
+		periodicTimezone: {
+			type: "string",
+			title: "Broadcast Timezone",
+			description: "IANA timezone for schedule matching (e.g., Europe/Zurich, America/New_York)",
+			default: "Europe/Zurich",
+		},
+		periodicPin: {
+			type: "boolean",
+			title: "Pin Periodic Message",
+			description: "Pin the periodic broadcast message in the chat",
+			default: true,
+		},
+		periodicUnpinPrevious: {
+			type: "boolean",
+			title: "Unpin Previous Message",
+			description: "Unpin the previous periodic message when sending a new one",
+			default: true,
+		},
+		periodicRange: {
+			type: "string",
+			title: "Periodic Range",
+			description: "Timeline range for periodic broadcast",
+			enum: ["week", "2weeks", "30days"],
+			default: "week",
 		},
 	},
 	required: ["calendars"],
@@ -498,4 +559,11 @@ export const DEFAULT_CONFIG: Partial<MeetupsConfig> = {
 	linkEvents: true,
 	eventkyBaseUrl: "https://eventky.app",
 	timelineOptions: ["week", "2weeks", "30days"],
+	periodicEnabled: false,
+	periodicDay: 1,
+	periodicHour: 7,
+	periodicTimezone: "Europe/Zurich",
+	periodicPin: true,
+	periodicUnpinPrevious: true,
+	periodicRange: "week",
 };

@@ -102,6 +102,12 @@ export function getChatConfig(chatId: string): ChatConfigRecord | undefined {
 	};
 }
 
+export function listAllChatIds(): string[] {
+	const database = ensureDb();
+	const rows = database.query<[string]>(`SELECT chat_id FROM chat_configs`);
+	return rows.map((r) => r[0]);
+}
+
 // ---------------------------------------------------------------------------
 // Snapshots keyed by config hash (primary reuse mechanism)
 // ---------------------------------------------------------------------------

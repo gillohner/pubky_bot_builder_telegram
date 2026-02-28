@@ -467,7 +467,7 @@ async function fetchEventDetails(
  * Fetch events for the specified calendars, expand recurrences, and return
  * occurrences sorted by date within the given time window.
  */
-async function fetchEvents(
+export async function fetchEvents(
 	config: MeetupsConfig,
 	calendarIndices: number[],
 	windowEnd: Date,
