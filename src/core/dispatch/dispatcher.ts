@@ -122,8 +122,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 			}
 		}
 		const response = res.value ?? { kind: "none" } as ServiceResponse;
-		// Always delete the user's command message (e.g., "/meetups")
-		if (response.kind !== "none") {
+		if (response.kind !== "none" && route.deleteCommandMessage) {
 			response.deleteTrigger = true;
 		}
 		// Apply per-service messageTtl from config (overrides global default, overridden by service code)
@@ -331,7 +330,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				bundle.data_url,
 				payload as unknown as ExecutePayload,
 				{
-					timeoutMs: 1000,
+					timeoutMs: listener.net ? 10000 : 2000,
 					hasNpm: bundle.has_npm === 1,
 					net: listener.net,
 				},

@@ -43,7 +43,6 @@ export interface PubkyBotServiceRef {
 		datasets?: Record<string, string>; // merge with service datasets
 	};
 	adminOnly?: boolean;
-	deleteCommandMessage?: boolean;
 }
 
 export interface PubkyBotConfig {
@@ -390,7 +389,6 @@ function normalizeModularBotConfig(config: Record<string, unknown>): PubkyBotCon
 			serviceConfigRef: configUrl,
 			overrides,
 			adminOnly: ref.adminOnly as boolean | undefined,
-			deleteCommandMessage: ref.deleteCommandMessage as boolean | undefined,
 		};
 	};
 
@@ -651,7 +649,7 @@ async function resolveServiceRef(
 		config: Object.keys(filteredConfig).length > 0 ? filteredConfig : undefined,
 		serviceId,
 		net,
-		deleteCommandMessage: serviceRef.deleteCommandMessage,
+		deleteCommandMessage: rawConfig.deleteCommandMessage as boolean | undefined,
 	};
 }
 
