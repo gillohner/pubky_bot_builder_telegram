@@ -124,7 +124,7 @@ export const TRIGGERWORDS_CONFIG_SCHEMA: JSONSchema = {
 			title: "Message TTL",
 			description: "Auto-delete bot messages after this many seconds (0 to keep forever)",
 			minimum: 0,
-			default: 300,
+			default: 0,
 		},
 	},
 };
