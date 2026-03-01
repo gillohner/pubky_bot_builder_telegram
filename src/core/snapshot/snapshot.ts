@@ -129,18 +129,15 @@ export async function buildSnapshot(
 			async (code) => await sha256Hex(code),
 		)
 	));
-	// Persist bundles if not present.
+	// Persist bundles (upsert to keep data_url pointing at fresh temp files).
 	for (const b of built) {
-		const existing = getServiceBundle(b.bundleHash);
-		if (!existing) {
-			saveServiceBundle({
-				bundle_hash: b.bundleHash,
-				data_url: b.entry, // entry is either data URL or file path
-				code: b.code,
-				created_at: Date.now(),
-				has_npm: b.hasNpm ? 1 : 0,
-			});
-		}
+		saveServiceBundle({
+			bundle_hash: b.bundleHash,
+			data_url: b.entry,
+			code: b.code,
+			created_at: Date.now(),
+			has_npm: b.hasNpm ? 1 : 0,
+		});
 	}
 	const commandRoutes: Record<string, CommandRoute> = {};
 	let idx = 0;

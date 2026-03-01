@@ -296,11 +296,11 @@ async function bundleWithEsbuild(
 			const vendorOutput = await vendorCmd.output();
 			if (!vendorOutput.success) {
 				const stderr = new TextDecoder().decode(vendorOutput.stderr);
-				log.warn("bundleService.cache.warn", { stderr });
-				// Continue anyway - cache might already exist
+				log.error("bundleService.cache.failed", { servicePath, stderr });
+				// Continue anyway - cache might already exist, but sandbox will likely fail
 			}
 		} catch (e) {
-			log.warn("bundleService.cache.spawn", { error: (e as Error).message });
+			log.error("bundleService.cache.spawn", { servicePath, error: (e as Error).message });
 			// Continue - inlining may still work without cache
 		}
 

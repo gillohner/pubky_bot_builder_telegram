@@ -173,7 +173,7 @@ export function saveServiceBundle(rec: ServiceBundleRecord): void {
 	database.query(
 		`INSERT INTO service_bundles (bundle_hash, data_url, code, created_at, has_npm)
          VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(bundle_hash) DO NOTHING`,
+         ON CONFLICT(bundle_hash) DO UPDATE SET data_url = excluded.data_url`,
 		[rec.bundle_hash, rec.data_url, rec.code, rec.created_at, rec.has_npm ?? 0],
 	);
 }
