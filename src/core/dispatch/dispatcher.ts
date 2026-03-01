@@ -330,7 +330,7 @@ export async function dispatch(evt: DispatchEvent): Promise<DispatcherResult> {
 				bundle.data_url,
 				payload as unknown as ExecutePayload,
 				{
-					timeoutMs: listener.net ? 10000 : 2000,
+					timeoutMs: listener.net ? 10000 : bundle.has_npm === 1 ? 5000 : 2000,
 					hasNpm: bundle.has_npm === 1,
 					net: listener.net,
 				},
