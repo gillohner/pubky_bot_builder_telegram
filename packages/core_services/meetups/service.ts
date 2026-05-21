@@ -446,7 +446,7 @@ async function fetchCalendarEventUris(
 		console.error(`Invalid calendar URI: ${calendarUri}`);
 		return [];
 	}
-	const url = `${baseUrl}/v0/calendar/${parsed.authorId}/${parsed.calendarId}`;
+	const url = `${baseUrl}/v0/eventky/calendar/${parsed.authorId}/${parsed.calendarId}`;
 	const resp = await fetch(url);
 	if (!resp.ok) {
 		console.error(`Failed to fetch calendar ${calendarUri}: ${resp.status}`);
@@ -468,7 +468,7 @@ async function fetchEventDetails(
 		console.error(`Invalid event URI: ${eventUri}`);
 		return null;
 	}
-	const url = `${baseUrl}/v0/event/${parsed.authorId}/${parsed.eventId}`;
+	const url = `${baseUrl}/v0/eventky/event/${parsed.authorId}/${parsed.eventId}`;
 	const resp = await fetch(url);
 	if (!resp.ok) {
 		console.error(`Failed to fetch event ${eventUri}: ${resp.status}`);

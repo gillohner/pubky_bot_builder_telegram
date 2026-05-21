@@ -239,7 +239,7 @@ class PubkyWriter {
 					const imageBytes = await this.downloadTelegramFile(data.__image_file_id as string);
 
 					// 2. Compute BLAKE3 content hash for blob ID (Crockford Base32)
-					// pubky-app-specs requires: BLAKE3(content) → first 16 bytes → Crockford Base32
+					// eventky-app-specs requires: BLAKE3(content) → first 16 bytes → Crockford Base32
 					const hash = blake3(new Uint8Array(imageBytes));
 					const hashBytes = hash.slice(0, 16);
 					const blobId = encodeCrockfordBase32(hashBytes);

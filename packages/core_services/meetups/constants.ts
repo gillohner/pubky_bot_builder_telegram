@@ -108,7 +108,7 @@ export const DEFAULT_TIMELINE_OPTIONS: TimelineRangeId[] = ["today", "week", "2w
 // Nexus API Types
 // ============================================================================
 
-/** Full event details from Nexus /v0/event/{author_id}/{event_id} */
+/** Full event details from Nexus /v0/eventky/event/{author_id}/{event_id} */
 export interface NexusEventDetails {
 	id: string;
 	author: string;
@@ -129,14 +129,14 @@ export interface NexusEventDetails {
 	url?: string | null;
 }
 
-/** Response from /v0/event/{author_id}/{event_id} */
+/** Response from /v0/eventky/event/{author_id}/{event_id} */
 export interface NexusEventView {
 	details: NexusEventDetails;
 	tags?: unknown[];
 	attendees?: unknown[];
 }
 
-/** Response from /v0/calendar/{author_id}/{calendar_id} */
+/** Response from /v0/eventky/calendar/{author_id}/{calendar_id} */
 export interface NexusCalendarView {
 	details: {
 		id: string;
